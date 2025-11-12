@@ -61,3 +61,8 @@ Pull request assignment service
 1. Код сервиса
 2. Makefile c командами сборки проекта / Описанная в README.md инструкция по запуску
 3. Описанные в README.md вопросы/проблемы, с которыми столкнулись, и ваша логика их решений (если требуется)
+
+
+## Вопросы, мои решения
+- В openapi.yml в required нет флага needMoreReviewers для PR, в ТЗ есть - решил добавить
+- В openapi.yml в properties есть createdAt, mergedAt, в ТЗ нет - решил добавить
