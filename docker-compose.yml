@@ -1,0 +1,46 @@
+networks:
+  avito:
+    name: ${DB_NETWORK}
+    external: true
+
+services:
+  postgres-user:
+    image: postgres:15
+    container_name: postgres-user
+    env_file: .env
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    ports:
+      - "5432:5432"
+    networks:
+      - avito
+    command: [
+      "postgres",
+      "-p", "${PG_PORT}",
+      "-c", "max_connections=${PG_MAX_CONNECTIONS}",
+      "-c", "shared_buffers=${PG_SHARED_BUFFERS}",
+      "-c", "effective_cache_size=${PG_EFFECTIVE_CACHE}",
+      "-c", "work_mem=${PG_WORK_MEM}",
+      "-c", "maintenance_work_mem=${PG_MAINTENANCE_WORK_MEM}",
+      "-c", "random_page_cost=${PG_RANDOM_PAGE_COST}",
+      "-c", "temp_file_limit=${PG_TEMP_FILE_LIMIT}",
+      "-c", "log_min_duration_statement=${PG_LOG_MIN_DURATION}",
+      "-c", "idle_in_transaction_session_timeout=${PG_IDLE_TIMEOUT}",
+      "-c", "lock_timeout=${PG_LOCK_TIMEOUT}",
+      "-c", "statement_timeout=${PG_STATEMENT_TIMEOUT}",
+      "-c", "shared_preload_libraries=${PG_SHARED_PRELOAD_LIB}",
+      "-c", "pg_stat_statements.max=${PG_STAT_MAX}",
+      "-c", "pg_stat_statements.track=${PG_STAT_TRACK}"
+    ]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+
+volumes:
+  postgres-data:
