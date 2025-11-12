@@ -18,6 +18,9 @@ linters:
     - prealloc
     - bodyclose
     - sqlclosecheck
+
+formatters:
+  enable:
     - gofmt
     - goimports
 
