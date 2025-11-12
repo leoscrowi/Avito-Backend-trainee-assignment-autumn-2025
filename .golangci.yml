@@ -1,0 +1,44 @@
+version: '2'
+
+run:
+  timeout: 5m
+  tests: true
+  concurrency: 8
+
+inters:
+  enable:
+    - errcheck
+    - govet
+    - ineffassign
+    - staticcheck
+    - unused
+    - gocritic
+    - misspell
+    - goconst
+    - prealloc
+    - bodyclose
+    - sqlclosecheck
+    - gofmt
+    - varcheck
+    - goimports
+
+linters-settings:
+  gocritic:
+    enabled-tags:
+      - diagnostic
+      - performance
+      - style
+    disabled-checks:
+      - commentFormatting
+
+  goconst:
+    min-len: 2
+    min-occurrences: 2
+
+  misspell:
+    locale: US
+
+  prealloc:
+    simple: true
+    range-loops: true
+    for-loops: true
