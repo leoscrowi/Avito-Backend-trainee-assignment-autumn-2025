@@ -5,7 +5,7 @@ run:
   tests: true
   concurrency: 8
 
-inters:
+linters:
   enable:
     - errcheck
     - govet
@@ -19,7 +19,6 @@ inters:
     - bodyclose
     - sqlclosecheck
     - gofmt
-    - varcheck
     - goimports
 
 linters-settings:

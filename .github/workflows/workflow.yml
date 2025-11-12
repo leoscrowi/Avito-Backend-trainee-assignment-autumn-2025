@@ -29,7 +29,8 @@ jobs:
         run: go mod download
 
       - name: Install golangci-lint
-        uses: golangci/golangci-lint-action@v3
+        run: |
+            curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.55.2
 
       - name: Run golangci-lint
-        run: golangci-lint run
+        run: golangci-lint run --out-format=colored-line-number
