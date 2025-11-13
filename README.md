@@ -68,3 +68,7 @@ Pull request assignment service
 - В openapi.yml в properties есть createdAt, mergedAt, в ТЗ нет - решил добавить
 
 `cp .env-sample .env`
+
+- chi
+- squirell
+- sqlx
