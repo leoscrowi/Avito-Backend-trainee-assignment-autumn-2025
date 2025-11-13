@@ -3,8 +3,8 @@ package domain
 import "github.com/google/uuid"
 
 type Team struct {
-	TeamName string       `json:"team_name"`
-	Members  []TeamMember `json:"members"`
+	TeamName string `json:"team_name"`
+	Members  []User `json:"members"`
 }
 
 // TODO: разобраться, зачем нужно, пока выглядит сомнительно, но взято из openapi.yml

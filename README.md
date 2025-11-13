@@ -66,3 +66,5 @@ Pull request assignment service
 ## Вопросы, мои решения
 - В openapi.yml в required нет флага needMoreReviewers для PR, в ТЗ есть - решил добавить
 - В openapi.yml в properties есть createdAt, mergedAt, в ТЗ нет - решил добавить
+
+`cp .env-sample .env`
