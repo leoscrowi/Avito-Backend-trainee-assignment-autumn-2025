@@ -26,8 +26,13 @@ func (r *Repository) SetIsActive(ctx context.Context, userID uuid.UUID, isActive
 	panic("implement me")
 }
 
-func (r *Repository) CreateOrUpdateUser(ctx context.Context, user domain.User) (uuid.UUID, error) {
+func (r *Repository) CreateOrUpdateUser(ctx context.Context, user *domain.User) (uuid.UUID, error) {
 	const op = "users.Repository.CreateOrUpdateUser"
+
+	if user == nil {
+		return uuid.Nil, fmt.Errorf("%s: user is nil", op)
+	}
+
 	fail := func(err error) (uuid.UUID, error) {
 		return uuid.Nil, fmt.Errorf("%s: %v", op, err)
 	}
