@@ -2,19 +2,17 @@ package postgresql
 
 import (
 	"context"
+	"database/sql"
+	"errors"
 	"fmt"
 	"time"
 
 	sq "github.com/Masterminds/squirrel"
-	"github.com/google/uuid"
 	"github.com/jmoiron/sqlx"
-	"github.com/lib/pq"
-
 	"github.com/leoscrowi/pr-assignment-service/domain"
 )
 
 const tableName = "pull_requests"
-const reviewersTableName = "pull_requests_reviewers"
 
 type Repository struct {
 	db *sqlx.DB
@@ -24,15 +22,15 @@ func NewRepository(db *sqlx.DB) *Repository {
 	return &Repository{db: db}
 }
 
-func (r *Repository) CreatePullRequest(ctx context.Context, pr *domain.PullRequest) (domain.PullRequest, error) {
+func (r *Repository) CreatePullRequest(ctx context.Context, pr *domain.PullRequest) error {
 	const op = "pull_requests.Repository.CreatePullRequest"
 
-	if pr == nil {
-		return domain.PullRequest{}, fmt.Errorf("%s: pr is nil", op)
+	fail := func(err error) error {
+		return fmt.Errorf("%s: %v", op, err)
 	}
 
-	fail := func(err error) (domain.PullRequest, error) {
-		return domain.PullRequest{}, fmt.Errorf("%s: %v", op, err)
+	if pr == nil {
+		return fmt.Errorf("pull request is nil")
 	}
 
 	tx, err := r.db.BeginTxx(ctx, nil)
@@ -49,20 +47,16 @@ func (r *Repository) CreatePullRequest(ctx context.Context, pr *domain.PullReque
 			"pull_request_name",
 			"author_id",
 			"status",
-			"assigned_reviewers",
 			"need_more_reviewers",
 			"created_at",
-			"updated_at",
 		).
 		Values(
 			pr.PullRequestID,
 			pr.PullRequestName,
 			pr.AuthorID,
 			pr.Status,
-			pq.Array(pr.AssignedReviewers),
-			pr.NeedMoreReviewers,
-			pr.CreatedAt,
-			pr.MergedAt,
+			len(pr.AssignedReviewers) < 2,
+			time.Now(),
 		).
 		ToSql()
 	if err != nil {
@@ -77,10 +71,10 @@ func (r *Repository) CreatePullRequest(ctx context.Context, pr *domain.PullReque
 		return fail(err)
 	}
 
-	return *pr, nil
+	return nil
 }
 
-func (r *Repository) FindPullRequestsByUserID(ctx context.Context, userID uuid.UUID) ([]domain.PullRequestShort, error) {
+func (r *Repository) FindPullRequestsByUserID(ctx context.Context, userID string) ([]domain.PullRequestShort, error) {
 	const op = "pull_requests.Repository.FindPullRequestsByUserID"
 
 	fail := func(err error) ([]domain.PullRequestShort, error) {
@@ -105,7 +99,7 @@ func (r *Repository) FindPullRequestsByUserID(ctx context.Context, userID uuid.U
 		return fail(err)
 	}
 
-	rows, err := tx.Queryx(query, args...)
+	rows, err := tx.QueryxContext(ctx, query, args...)
 	if err != nil {
 		return fail(err)
 	}
@@ -115,9 +109,9 @@ func (r *Repository) FindPullRequestsByUserID(ctx context.Context, userID uuid.U
 
 	var result []domain.PullRequestShort
 	for rows.Next() {
-		var pullRequestID uuid.UUID
+		var pullRequestID string
 		var pullRequestName string
-		var authorID uuid.UUID
+		var authorID string
 		var status domain.Status
 
 		if err = rows.Scan(&pullRequestID, &pullRequestName, &authorID, &status); err != nil {
@@ -144,7 +138,7 @@ func (r *Repository) FindPullRequestsByUserID(ctx context.Context, userID uuid.U
 	return result, nil
 }
 
-func (r *Repository) MergePullRequest(ctx context.Context, prID uuid.UUID) (domain.PullRequest, error) {
+func (r *Repository) MergePullRequest(ctx context.Context, prID string) (domain.PullRequest, error) {
 	const op = "pull_requests.Repository.MergePullRequest"
 
 	fail := func(err error) (domain.PullRequest, error) {
@@ -174,7 +168,7 @@ func (r *Repository) MergePullRequest(ctx context.Context, prID uuid.UUID) (doma
 		return fail(err)
 	}
 
-	var reviewers []uuid.UUID
+	var reviewers []string
 	query, args, err = sq.Select("reviewer_id").
 		From(reviewersTableName).
 		Where(sq.Eq{"pull_request_id": prID}).
@@ -197,4 +191,38 @@ func (r *Repository) MergePullRequest(ctx context.Context, prID uuid.UUID) (doma
 	}
 
 	return updated, nil
+}
+
+func (r *Repository) IsMerged(ctx context.Context, prID string) (bool, error) {
+	const op = "pull_requests.Repository.IsMerged"
+
+	fail := func(err error) (bool, error) {
+		return false, fmt.Errorf("%s: %v", op, err)
+	}
+
+	tx, err := r.db.BeginTxx(ctx, nil)
+	if err != nil {
+		return fail(err)
+	}
+	defer func(tx *sqlx.Tx) {
+		_ = tx.Rollback()
+	}(tx)
+
+	query, args, err := sq.Select("pull_request_id").From(tableName).Where(sq.Eq{"pull_request_id": prID}).Limit(1).ToSql()
+	if err != nil {
+		return fail(err)
+	}
+
+	var pr domain.PullRequest
+	if err = tx.GetContext(ctx, &pr, query, args...); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			if commitErr := tx.Commit(); commitErr != nil {
+				return fail(commitErr)
+			}
+			return false, nil
+		}
+		return fail(err)
+	}
+
+	return pr.Status == domain.MERGED, nil
 }

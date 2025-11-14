@@ -37,7 +37,7 @@ func (r *Repository) FetchByName(ctx context.Context, teamName string) (domain.T
 		return fail(err)
 	}
 
-	rows, err := tx.Queryx(query, args...)
+	rows, err := tx.QueryxContext(ctx, query, args...)
 	if err != nil {
 		return fail(err)
 	}

@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/google/uuid"
 	"github.com/leoscrowi/pr-assignment-service/domain"
 	"github.com/leoscrowi/pr-assignment-service/internal/app/pull_requests"
 	"github.com/leoscrowi/pr-assignment-service/internal/app/users"
@@ -19,7 +18,7 @@ func NewUsecase(uRepository users.Repository, prRepository pull_requests.Reposit
 	return &Usecase{UsersRepository: uRepository, PullRequestsRepository: prRepository}
 }
 
-func (u *Usecase) SetIsActive(ctx context.Context, userID uuid.UUID, isActive bool) (domain.User, error) {
+func (u *Usecase) SetIsActive(ctx context.Context, userID string, isActive bool) (domain.User, error) {
 	const op = "users.Usecase.SetIsActive"
 
 	user, err := u.UsersRepository.FetchByID(ctx, userID)
@@ -36,7 +35,7 @@ func (u *Usecase) SetIsActive(ctx context.Context, userID uuid.UUID, isActive bo
 	return user, nil
 }
 
-func (u *Usecase) GetReview(ctx context.Context, userID uuid.UUID) ([]domain.PullRequestShort, error) {
+func (u *Usecase) GetReview(ctx context.Context, userID string) ([]domain.PullRequestShort, error) {
 	const op = "users.Usecase.GetReview"
 
 	prs, err := u.PullRequestsRepository.FindPullRequestsByUserID(ctx, userID)

@@ -3,11 +3,10 @@ package users
 import (
 	"context"
 
-	"github.com/google/uuid"
 	"github.com/leoscrowi/pr-assignment-service/domain"
 )
 
 type UseCase interface {
-	SetIsActive(ctx context.Context, userID uuid.UUID, isActive bool) error
-	GetReview(ctx context.Context, userID uuid.UUID) ([]domain.PullRequestShort, error)
+	SetIsActive(ctx context.Context, userID string, isActive bool) error
+	GetReview(ctx context.Context, userID string) ([]domain.PullRequestShort, error)
 }

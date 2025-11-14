@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/google/uuid"
 	"github.com/jmoiron/sqlx"
 	"github.com/leoscrowi/pr-assignment-service/domain"
 
@@ -21,7 +20,7 @@ func NewRepository(db *sqlx.DB) *Repository {
 	return &Repository{db: db}
 }
 
-func (r *Repository) SetIsActive(ctx context.Context, userID uuid.UUID, isActive bool) error {
+func (r *Repository) SetIsActive(ctx context.Context, userID string, isActive bool) error {
 	const op = "users.Repository.SetIsActive"
 
 	fail := func(err error) error {
@@ -57,15 +56,15 @@ func (r *Repository) SetIsActive(ctx context.Context, userID uuid.UUID, isActive
 	return nil
 }
 
-func (r *Repository) CreateOrUpdateUser(ctx context.Context, user *domain.User) (uuid.UUID, error) {
+func (r *Repository) CreateOrUpdateUser(ctx context.Context, user *domain.User) (string, error) {
 	const op = "users.Repository.CreateOrUpdateUser"
 
-	if user == nil {
-		return uuid.Nil, fmt.Errorf("%s: user is nil", op)
+	fail := func(err error) (string, error) {
+		return "", fmt.Errorf("%s: %v", op, err)
 	}
 
-	fail := func(err error) (uuid.UUID, error) {
-		return uuid.Nil, fmt.Errorf("%s: %v", op, err)
+	if user == nil {
+		return fail(fmt.Errorf("%s: user is nil", op))
 	}
 
 	tx, err := r.db.BeginTxx(ctx, nil)
@@ -121,7 +120,7 @@ func (r *Repository) FetchByTeamName(ctx context.Context, teamName string) ([]do
 		return fail(err)
 	}
 
-	rows, err := tx.Queryx(query, args...)
+	rows, err := tx.QueryxContext(ctx, query, args...)
 	if err != nil {
 		return fail(err)
 	}
@@ -131,7 +130,7 @@ func (r *Repository) FetchByTeamName(ctx context.Context, teamName string) ([]do
 
 	var result []domain.TeamMember
 	for rows.Next() {
-		var userID uuid.UUID
+		var userID string
 		var userName string
 		var isActive bool
 
@@ -145,6 +144,56 @@ func (r *Repository) FetchByTeamName(ctx context.Context, teamName string) ([]do
 			IsActive: isActive,
 		}
 		result = append(result, pr)
+	}
+
+	if err = rows.Err(); err != nil {
+		return fail(err)
+	}
+
+	if err = tx.Commit(); err != nil {
+		return fail(err)
+	}
+
+	return result, nil
+}
+
+func (r *Repository) GetActiveUsersIDByTeam(ctx context.Context, teamName string) ([]string, error) {
+	const op = "users.Repository.GetActiveUsersIDByTeam"
+
+	fail := func(err error) ([]string, error) {
+		return nil, fmt.Errorf("%s: %v", op, err)
+	}
+
+	tx, err := r.db.BeginTxx(ctx, nil)
+	if err != nil {
+		return fail(err)
+	}
+	defer func(tx *sqlx.Tx) {
+		_ = tx.Rollback()
+	}(tx)
+
+	query, args, err := sq.Select("user_id").From(tableName).
+		Where(sq.Eq{"team_name": teamName, "is_active": true}).ToSql()
+	if err != nil {
+		return fail(err)
+	}
+
+	rows, err := tx.QueryxContext(ctx, query, args...)
+	if err != nil {
+		return fail(err)
+	}
+	defer func(rows *sqlx.Rows) {
+		_ = rows.Close()
+	}(rows)
+
+	var result []string
+	for rows.Next() {
+		var userID string
+		if err = rows.Scan(&userID); err != nil {
+			return fail(err)
+		}
+
+		result = append(result, userID)
 	}
 
 	if err = rows.Err(); err != nil {

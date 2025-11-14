@@ -3,13 +3,14 @@ package users
 import (
 	"context"
 
-	"github.com/google/uuid"
 	"github.com/leoscrowi/pr-assignment-service/domain"
 )
 
 type Repository interface {
-	SetIsActive(ctx context.Context, userID uuid.UUID, isActive bool) error
-	CreateOrUpdateUser(ctx context.Context, user *domain.User) (uuid.UUID, error)
-	FetchByID(ctx context.Context, userID uuid.UUID) (domain.User, error)
+	SetIsActive(ctx context.Context, userID string, isActive bool) error
+	CreateOrUpdateUser(ctx context.Context, user *domain.User) (string, error)
+	FetchByID(ctx context.Context, userID string) (domain.User, error)
 	FetchByTeamName(ctx context.Context, teamName string) ([]domain.TeamMember, error)
+
+	GetActiveUsersIDByTeam(ctx context.Context, teamName string) ([]string, error)
 }
