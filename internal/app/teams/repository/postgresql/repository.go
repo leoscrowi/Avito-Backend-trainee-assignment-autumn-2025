@@ -70,14 +70,14 @@ func (r *Repository) CreateTeam(ctx context.Context, team *domain.Team) error {
 		_ = tx.Rollback()
 	}(tx)
 
-	query, arg, err := sq.Insert(tableName).
+	query, args, err := sq.Insert(tableName).
 		Columns("team_name").
 		Values(team.TeamName).ToSql()
 	if err != nil {
 		return fail(err)
 	}
 
-	_, err = tx.ExecContext(ctx, query, arg...)
+	_, err = tx.ExecContext(ctx, query, args...)
 	if err != nil {
 		return fail(err)
 	}

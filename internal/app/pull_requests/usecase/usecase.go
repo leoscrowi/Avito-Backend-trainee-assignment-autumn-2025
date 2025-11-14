@@ -5,14 +5,14 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/leoscrowi/pr-assignment-service/domain"
-	"github.com/leoscrowi/pr-assignment-service/internal/app/users"
+	"github.com/leoscrowi/pr-assignment-service/internal/app/pull_requests"
 )
 
 type Usecase struct {
-	Repository users.Repository
+	Repository pull_requests.Repository
 }
 
-func NewUsecase(repository users.Repository) *Usecase {
+func NewUsecase(repository pull_requests.Repository) *Usecase {
 	return &Usecase{Repository: repository}
 }
 
@@ -22,8 +22,12 @@ func (u *Usecase) ReassignPullRequest(ctx context.Context, pullRequestID uuid.UU
 }
 
 func (u *Usecase) MergePullRequest(ctx context.Context, pullRequestID uuid.UUID) (domain.PullRequest, error) {
-	// TODO: implement
-	panic("implement me")
+	pr, err := u.Repository.MergePullRequest(ctx, pullRequestID)
+	if err != nil {
+		return domain.PullRequest{}, err
+	}
+
+	return pr, err
 }
 
 func (u *Usecase) CreatePullRequest(ctx context.Context, pullRequest *domain.PullRequest) (domain.PullRequest, error) {

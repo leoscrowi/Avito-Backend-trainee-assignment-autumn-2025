@@ -3,6 +3,7 @@ package postgresql
 import (
 	"context"
 	"fmt"
+	"time"
 
 	sq "github.com/Masterminds/squirrel"
 	"github.com/google/uuid"
@@ -13,6 +14,7 @@ import (
 )
 
 const tableName = "pull_requests"
+const reviewersTableName = "pull_requests_reviewers"
 
 type Repository struct {
 	db *sqlx.DB
@@ -55,58 +57,13 @@ func (r *Repository) CreatePullRequest(ctx context.Context, pr *domain.PullReque
 		Values(
 			pr.PullRequestID,
 			pr.PullRequestName,
-			pr.AuthorId,
+			pr.AuthorID,
 			pr.Status,
 			pq.Array(pr.AssignedReviewers),
 			pr.NeedMoreReviewers,
 			pr.CreatedAt,
-			pr.UpdatedAt,
+			pr.MergedAt,
 		).
-		ToSql()
-	if err != nil {
-		return fail(err)
-	}
-
-	if _, err = tx.ExecContext(ctx, query, args...); err != nil {
-		return fail(err)
-	}
-
-	if err = tx.Commit(); err != nil {
-		return fail(err)
-	}
-
-	return *pr, nil
-}
-
-func (r *Repository) UpdatePullRequest(ctx context.Context, pr *domain.PullRequest) (domain.PullRequest, error) {
-	const op = "pull_requests.Repository.UpdatePullRequest"
-
-	if pr == nil {
-		return domain.PullRequest{}, fmt.Errorf("%s: pr is nil", op)
-	}
-
-	fail := func(err error) (domain.PullRequest, error) {
-		return domain.PullRequest{}, fmt.Errorf("%s: %v", op, err)
-	}
-
-	tx, err := r.db.BeginTxx(ctx, nil)
-	if err != nil {
-		return domain.PullRequest{}, fmt.Errorf("%s: %w", op, err)
-	}
-	defer func(tx *sqlx.Tx) {
-		_ = tx.Rollback()
-	}(tx)
-
-	// TODO: проверить, будут ли затираться пустые значения, если что - пофиксить
-	query, args, err := sq.Update(tableName).
-		Set("pull_request_name", pr.PullRequestName).
-		Set("author_id", pr.AuthorId).
-		Set("status", pr.Status).
-		Set("assigned_reviewers", pq.Array(pr.AssignedReviewers)).
-		Set("need_more_reviewers", pr.NeedMoreReviewers).
-		Set("created_at", pr.CreatedAt).
-		Set("updated_at", pr.UpdatedAt).
-		Where(sq.Eq{"pull_request_id": pr.PullRequestID}).
 		ToSql()
 	if err != nil {
 		return fail(err)
@@ -185,4 +142,59 @@ func (r *Repository) FindPullRequestsByUserID(ctx context.Context, userID uuid.U
 	}
 
 	return result, nil
+}
+
+func (r *Repository) MergePullRequest(ctx context.Context, prID uuid.UUID) (domain.PullRequest, error) {
+	const op = "pull_requests.Repository.MergePullRequest"
+
+	fail := func(err error) (domain.PullRequest, error) {
+		return domain.PullRequest{}, fmt.Errorf("%s: %v", op, err)
+	}
+
+	tx, err := r.db.BeginTxx(ctx, nil)
+	if err != nil {
+		return fail(err)
+	}
+	defer func(tx *sqlx.Tx) {
+		_ = tx.Rollback()
+	}(tx)
+
+	query, args, err := sq.Update(tableName).
+		Set("status", "MERGED").
+		Set("merged_at", time.Now()).
+		Where(sq.Eq{"pull_request_id": prID}).
+		Suffix("RETURNING pull_request_id, pull_request_name, author_id, status, merged_at").
+		ToSql()
+	if err != nil {
+		return fail(err)
+	}
+
+	var pr domain.PullRequest
+	if err = tx.GetContext(ctx, &pr, query, args...); err != nil {
+		return fail(err)
+	}
+
+	var reviewers []uuid.UUID
+	query, args, err = sq.Select("reviewer_id").
+		From(reviewersTableName).
+		Where(sq.Eq{"pull_request_id": prID}).
+		ToSql()
+	if err = tx.SelectContext(ctx, &reviewers, query, args...); err != nil {
+		return fail(err)
+	}
+
+	updated := domain.PullRequest{
+		PullRequestID:     pr.PullRequestID,
+		PullRequestName:   pr.PullRequestName,
+		AuthorID:          pr.AuthorID,
+		Status:            pr.Status,
+		AssignedReviewers: reviewers,
+		MergedAt:          pr.MergedAt,
+	}
+
+	if err = tx.Commit(); err != nil {
+		return fail(err)
+	}
+
+	return updated, nil
 }

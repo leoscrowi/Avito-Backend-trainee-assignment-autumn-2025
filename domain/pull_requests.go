@@ -17,12 +17,12 @@ const (
 type PullRequest struct {
 	PullRequestID     uuid.UUID   `json:"pull_request_id"`
 	PullRequestName   string      `json:"pull_request_name"`
-	AuthorId          uuid.UUID   `json:"author_id"`
+	AuthorID          uuid.UUID   `json:"author_id"`
 	Status            Status      `json:"status"`
 	AssignedReviewers []uuid.UUID `json:"assigned_reviewers"`
 	NeedMoreReviewers bool        `json:"need_more_reviewers"`
 	CreatedAt         time.Time   `json:"created_at"`
-	UpdatedAt         time.Time   `json:"updated_at"`
+	MergedAt          time.Time   `json:"merged_at"`
 }
 
 type PullRequestShort struct {

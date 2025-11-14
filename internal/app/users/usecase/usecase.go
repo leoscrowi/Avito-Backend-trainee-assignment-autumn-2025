@@ -37,9 +37,11 @@ func (u *Usecase) SetIsActive(ctx context.Context, userID uuid.UUID, isActive bo
 }
 
 func (u *Usecase) GetReview(ctx context.Context, userID uuid.UUID) ([]domain.PullRequestShort, error) {
+	const op = "users.Usecase.GetReview"
+
 	prs, err := u.PullRequestsRepository.FindPullRequestsByUserID(ctx, userID)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("%s: %v", op, err)
 	}
 	return prs, nil
 }
