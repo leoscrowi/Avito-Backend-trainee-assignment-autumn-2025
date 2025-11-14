@@ -206,3 +206,43 @@ func (r *Repository) GetActiveUsersIDByTeam(ctx context.Context, teamName string
 
 	return result, nil
 }
+
+func (r *Repository) FetchByID(ctx context.Context, userID string) (domain.User, error) {
+	const op = "users.Repository.FetchByID"
+
+	fail := func(err error) (domain.User, error) {
+		return domain.User{}, fmt.Errorf("%s: %v", op, err)
+	}
+
+	tx, err := r.db.BeginTxx(ctx, nil)
+	if err != nil {
+		return fail(err)
+	}
+	defer func(tx *sqlx.Tx) {
+		_ = tx.Rollback()
+	}(tx)
+
+	query, args, err := sq.Select("user_id", "username", "team_name", "is_active").From(tableName).Where(sq.Eq{"user_id": userID}).ToSql()
+	if err != nil {
+		return fail(err)
+	}
+
+	rows, err := tx.QueryxContext(ctx, query, args...)
+	if err != nil {
+		return fail(err)
+	}
+	defer func(rows *sqlx.Rows) {
+		_ = rows.Close()
+	}(rows)
+
+	var user domain.User
+	if err = tx.GetContext(ctx, &user, query, args...); err != nil {
+		return fail(err)
+	}
+
+	if err = tx.Commit(); err != nil {
+		return fail(err)
+	}
+
+	return user, nil
+}

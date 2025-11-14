@@ -2,6 +2,7 @@ package usecase
 
 import (
 	"context"
+
 	"github.com/leoscrowi/pr-assignment-service/internal/app/teams"
 
 	"github.com/leoscrowi/pr-assignment-service/domain"
@@ -18,7 +19,7 @@ func NewUsecase(uRepository users.Repository, tRepository teams.Repository) *Use
 }
 
 func (u *Usecase) GetTeam(ctx context.Context, teamName string) (domain.Team, error) {
-	team, err := u.TeamsRepository.FetchByName(ctx, teamName)
+	team, err := u.TeamsRepository.FetchTeamByName(ctx, teamName)
 	if err != nil {
 		return domain.Team{}, err
 	}

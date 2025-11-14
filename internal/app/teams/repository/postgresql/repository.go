@@ -19,7 +19,7 @@ func NewRepository(db *sqlx.DB) *Repository {
 	return &Repository{db: db}
 }
 
-func (r *Repository) FetchByName(ctx context.Context, teamName string) (domain.Team, error) {
+func (r *Repository) FetchTeamByName(ctx context.Context, teamName string) (domain.Team, error) {
 	const op = "teams.Repository.FetchByName"
 
 	fail := func(err error) (domain.Team, error) { return domain.Team{}, fmt.Errorf("%s: %v", op, err) }

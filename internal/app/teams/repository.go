@@ -8,5 +8,5 @@ import (
 
 type Repository interface {
 	CreateTeam(ctx context.Context, team *domain.Team) error
-	FetchByName(ctx context.Context, teamName string) (domain.Team, error)
+	FetchTeamByName(ctx context.Context, teamName string) (domain.Team, error)
 }
