@@ -5,9 +5,11 @@ import (
 	"fmt"
 
 	sq "github.com/Masterminds/squirrel"
+	"github.com/google/uuid"
 	"github.com/jmoiron/sqlx"
-	"github.com/leoscrowi/pr-assignment-service/domain"
 	"github.com/lib/pq"
+
+	"github.com/leoscrowi/pr-assignment-service/domain"
 )
 
 const tableName = "pull_requests"
@@ -27,9 +29,13 @@ func (r *Repository) CreatePullRequest(ctx context.Context, pr *domain.PullReque
 		return domain.PullRequest{}, fmt.Errorf("%s: pr is nil", op)
 	}
 
+	fail := func(err error) (domain.PullRequest, error) {
+		return domain.PullRequest{}, fmt.Errorf("%s: %v", op, err)
+	}
+
 	tx, err := r.db.BeginTxx(ctx, nil)
 	if err != nil {
-		return domain.PullRequest{}, fmt.Errorf("%s: %w", op, err)
+		return fail(err)
 	}
 	defer func(tx *sqlx.Tx) {
 		_ = tx.Rollback()
@@ -47,7 +53,7 @@ func (r *Repository) CreatePullRequest(ctx context.Context, pr *domain.PullReque
 			"updated_at",
 		).
 		Values(
-			pr.PullRequestId,
+			pr.PullRequestID,
 			pr.PullRequestName,
 			pr.AuthorId,
 			pr.Status,
@@ -58,15 +64,15 @@ func (r *Repository) CreatePullRequest(ctx context.Context, pr *domain.PullReque
 		).
 		ToSql()
 	if err != nil {
-		return domain.PullRequest{}, fmt.Errorf("%s: %w", op, err)
+		return fail(err)
 	}
 
-	if _, err := tx.ExecContext(ctx, query, args...); err != nil {
-		return domain.PullRequest{}, fmt.Errorf("%s: %w", op, err)
+	if _, err = tx.ExecContext(ctx, query, args...); err != nil {
+		return fail(err)
 	}
 
 	if err = tx.Commit(); err != nil {
-		return domain.PullRequest{}, fmt.Errorf("%s: %w", op, err)
+		return fail(err)
 	}
 
 	return *pr, nil
@@ -77,6 +83,10 @@ func (r *Repository) UpdatePullRequest(ctx context.Context, pr *domain.PullReque
 
 	if pr == nil {
 		return domain.PullRequest{}, fmt.Errorf("%s: pr is nil", op)
+	}
+
+	fail := func(err error) (domain.PullRequest, error) {
+		return domain.PullRequest{}, fmt.Errorf("%s: %v", op, err)
 	}
 
 	tx, err := r.db.BeginTxx(ctx, nil)
@@ -96,19 +106,83 @@ func (r *Repository) UpdatePullRequest(ctx context.Context, pr *domain.PullReque
 		Set("need_more_reviewers", pr.NeedMoreReviewers).
 		Set("created_at", pr.CreatedAt).
 		Set("updated_at", pr.UpdatedAt).
-		Where(sq.Eq{"pull_request_id": pr.PullRequestId}).
+		Where(sq.Eq{"pull_request_id": pr.PullRequestID}).
 		ToSql()
 	if err != nil {
-		return domain.PullRequest{}, fmt.Errorf("%s: %w", op, err)
+		return fail(err)
 	}
 
-	if _, err := tx.ExecContext(ctx, query, args...); err != nil {
-		return domain.PullRequest{}, fmt.Errorf("%s: %w", op, err)
+	if _, err = tx.ExecContext(ctx, query, args...); err != nil {
+		return fail(err)
 	}
 
 	if err = tx.Commit(); err != nil {
-		return domain.PullRequest{}, fmt.Errorf("%s: %w", op, err)
+		return fail(err)
 	}
 
 	return *pr, nil
+}
+
+func (r *Repository) FindPullRequestsByUserID(ctx context.Context, userID uuid.UUID) ([]domain.PullRequestShort, error) {
+	const op = "pull_requests.Repository.FindPullRequestsByUserID"
+
+	fail := func(err error) ([]domain.PullRequestShort, error) {
+		return []domain.PullRequestShort{}, fmt.Errorf("%s: %v", op, err)
+	}
+
+	tx, err := r.db.BeginTxx(ctx, nil)
+	if err != nil {
+		return fail(err)
+	}
+	defer func(tx *sqlx.Tx) {
+		_ = tx.Rollback()
+	}(tx)
+
+	query, args, err := sq.Select(
+		"pull_request_id",
+		"pull_request_name",
+		"author_id",
+		"status",
+	).From(tableName).Where(sq.Eq{"author_id": userID}).ToSql()
+	if err != nil {
+		return fail(err)
+	}
+
+	rows, err := tx.Queryx(query, args...)
+	if err != nil {
+		return fail(err)
+	}
+	defer func(rows *sqlx.Rows) {
+		_ = rows.Close()
+	}(rows)
+
+	var result []domain.PullRequestShort
+	for rows.Next() {
+		var pullRequestID uuid.UUID
+		var pullRequestName string
+		var authorID uuid.UUID
+		var status domain.Status
+
+		if err = rows.Scan(&pullRequestID, &pullRequestName, &authorID, &status); err != nil {
+			return fail(err)
+		}
+
+		pr := domain.PullRequestShort{
+			PullRequestID:   pullRequestID,
+			PullRequestName: pullRequestName,
+			AuthorID:        authorID,
+			Status:          status,
+		}
+		result = append(result, pr)
+	}
+
+	if err = rows.Err(); err != nil {
+		return fail(err)
+	}
+
+	if err = tx.Commit(); err != nil {
+		return fail(err)
+	}
+
+	return result, nil
 }

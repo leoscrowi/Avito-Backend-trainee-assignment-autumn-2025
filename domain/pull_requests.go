@@ -6,16 +6,16 @@ import (
 	"github.com/google/uuid"
 )
 
-type Status int
+type Status string
 
 const (
-	OPEN Status = iota
-	MERGED
+	OPEN   Status = "OPEN"
+	MERGED Status = "MERGED"
 )
 
 // TODO: кажется, можно добавить nullable прям в кавычках
 type PullRequest struct {
-	PullRequestId     uuid.UUID   `json:"pull_request_id"`
+	PullRequestID     uuid.UUID   `json:"pull_request_id"`
 	PullRequestName   string      `json:"pull_request_name"`
 	AuthorId          uuid.UUID   `json:"author_id"`
 	Status            Status      `json:"status"`
@@ -26,8 +26,8 @@ type PullRequest struct {
 }
 
 type PullRequestShort struct {
-	PullRequestId   uuid.UUID `json:"pull_request_id"`
+	PullRequestID   uuid.UUID `json:"pull_request_id"`
 	PullRequestName string    `json:"pull_request_name"`
-	AuthorId        uuid.UUID `json:"author_id"`
+	AuthorID        uuid.UUID `json:"author_id"`
 	Status          Status    `json:"status"`
 }

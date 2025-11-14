@@ -9,5 +9,5 @@ import (
 
 type UseCase interface {
 	SetIsActive(ctx context.Context, userID uuid.UUID, isActive bool) error
-	GetReview(ctx context.Context, userID uuid.UUID) []domain.PullRequest
+	GetReview(ctx context.Context, userID uuid.UUID) ([]domain.PullRequestShort, error)
 }
