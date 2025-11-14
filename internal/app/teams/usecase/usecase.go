@@ -33,6 +33,22 @@ func (u *Usecase) GetTeam(ctx context.Context, teamName string) (domain.Team, er
 }
 
 func (u *Usecase) AddTeam(ctx context.Context, team *domain.Team) (domain.Team, error) {
-	// TODO: implement
-	panic("implement me")
+	err := u.TeamsRepository.CreateTeam(ctx, team)
+	if err != nil {
+		return domain.Team{}, err
+	}
+	for _, teamMember := range team.Members {
+		var user = domain.User{
+			UserID:   teamMember.UserID,
+			Username: teamMember.UserName,
+			TeamName: team.TeamName,
+			IsActive: true,
+		}
+		_, err = u.UsersRepository.CreateOrUpdateUser(ctx, &user)
+		if err != nil {
+			return domain.Team{}, err
+		}
+	}
+
+	return *team, nil
 }

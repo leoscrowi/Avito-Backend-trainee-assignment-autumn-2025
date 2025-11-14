@@ -2,6 +2,7 @@ package postgresql
 
 import (
 	"context"
+	"fmt"
 
 	sq "github.com/Masterminds/squirrel"
 	"github.com/jmoiron/sqlx"
@@ -21,7 +22,7 @@ func NewRepository(db *sqlx.DB) *Repository {
 func (r *Repository) FetchByName(ctx context.Context, teamName string) (domain.Team, error) {
 	const op = "teams.Repository.FetchByName"
 
-	fail := func(err error) (domain.Team, error) { return domain.Team{}, err }
+	fail := func(err error) (domain.Team, error) { return domain.Team{}, fmt.Errorf("%s: %v", op, err) }
 
 	tx, err := r.db.BeginTxx(ctx, nil)
 	if err != nil {
@@ -54,4 +55,36 @@ func (r *Repository) FetchByName(ctx context.Context, teamName string) (domain.T
 	}
 
 	return team, nil
+}
+
+func (r *Repository) CreateTeam(ctx context.Context, team *domain.Team) error {
+	const op = "teams.Repository.CreateTeam"
+
+	fail := func(err error) error { return fmt.Errorf("%s: %v", op, err) }
+
+	tx, err := r.db.BeginTxx(ctx, nil)
+	if err != nil {
+		return fail(err)
+	}
+	defer func(tx *sqlx.Tx) {
+		_ = tx.Rollback()
+	}(tx)
+
+	query, arg, err := sq.Insert(tableName).
+		Columns("team_name").
+		Values(team.TeamName).ToSql()
+	if err != nil {
+		return fail(err)
+	}
+
+	_, err = tx.ExecContext(ctx, query, arg...)
+	if err != nil {
+		return fail(err)
+	}
+
+	if err = tx.Commit(); err != nil {
+		return fail(err)
+	}
+
+	return nil
 }
