@@ -11,7 +11,6 @@ const (
 	MERGED Status = "MERGED"
 )
 
-// TODO: кажется, можно добавить nullable прям в кавычках
 type PullRequest struct {
 	PullRequestID     string    `json:"pull_request_id"`
 	PullRequestName   string    `json:"pull_request_name"`

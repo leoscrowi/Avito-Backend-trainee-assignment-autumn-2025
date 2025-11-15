@@ -33,7 +33,7 @@ func (u *Usecase) ReassignPullRequest(ctx context.Context, pullRequestID string,
 	}
 
 	if pr.Status == domain.MERGED {
-		return fail(domain.NOT_ASSIGNED, "reviewer is not assigned to this PR", err)
+		return fail(domain.PR_MERGED, "PR was merged", err)
 	}
 
 	revs, err := u.PullRequestRepository.GetReviewersID(ctx, pullRequestID)

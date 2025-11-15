@@ -172,6 +172,10 @@ func (r *Repository) MergePullRequest(ctx context.Context, prID string) (domain.
 		From(reviewersTableName).
 		Where(sq.Eq{"pull_request_id": prID}).
 		ToSql()
+	if err != nil {
+		return fail(domain.INTERNAL, "internal server error", err)
+	}
+
 	if err = tx.SelectContext(ctx, &reviewers, query, args...); err != nil {
 		return fail(domain.INTERNAL, "internal server error", err)
 	}
@@ -256,15 +260,14 @@ func (r *Repository) FetchByID(ctx context.Context, prID string) (domain.PullReq
 		return fail(domain.INTERNAL, "internal server error", err)
 	}
 
-	if err = tx.Commit(); err != nil {
-		return fail(domain.INTERNAL, "internal server error", err)
-	}
-
 	var reviewers []string
 	query, args, err = sq.Select("reviewer_id").
 		From(reviewersTableName).
 		Where(sq.Eq{"pull_request_id": prID}).
 		ToSql()
+	if err != nil {
+		return fail(domain.INTERNAL, "internal server error", err)
+	}
 	if err = tx.SelectContext(ctx, &reviewers, query, args...); err != nil {
 		return fail(domain.INTERNAL, "internal server error", err)
 	}
