@@ -27,7 +27,7 @@ func (r *Repository) GetReviewersID(ctx context.Context, prID string) ([]string,
 		_ = tx.Rollback()
 	}(tx)
 
-	query, args, err := sq.Select("reviewer_id").From(reviewersTableName).Where(sq.Eq{"pull_request_id": prID}).ToSql()
+	query, args, err := sq.Select("reviewer_id").From(reviewersTableName).Where(sq.Eq{"pull_request_id": prID}).PlaceholderFormat(sq.Dollar).ToSql()
 	if err != nil {
 		return fail(domain.INTERNAL, "internal server error", err)
 	}
@@ -75,7 +75,7 @@ func (r *Repository) DeleteReviewer(ctx context.Context, prID, reviewerID string
 		_ = tx.Rollback()
 	}(tx)
 
-	query, args, err := sq.Delete(reviewersTableName).Where(sq.Eq{"pull_request_id": prID, "reviewer_id": reviewerID}).ToSql()
+	query, args, err := sq.Delete(reviewersTableName).Where(sq.Eq{"pull_request_id": prID, "reviewer_id": reviewerID}).PlaceholderFormat(sq.Dollar).ToSql()
 	if err != nil {
 		return fail(domain.INTERNAL, "internal server error", err)
 	}
@@ -107,7 +107,7 @@ func (r *Repository) AddReviewer(ctx context.Context, prID, reviewerID string) e
 		_ = tx.Rollback()
 	}(tx)
 
-	query, args, err := sq.Insert(reviewersTableName).Columns("pull_request_id", "reviewer_id").Values(prID, reviewerID).ToSql()
+	query, args, err := sq.Insert(reviewersTableName).Columns("pull_request_id", "reviewer_id").Values(prID, reviewerID).PlaceholderFormat(sq.Dollar).ToSql()
 	if err != nil {
 		return fail(domain.INTERNAL, "internal server error", err)
 	}

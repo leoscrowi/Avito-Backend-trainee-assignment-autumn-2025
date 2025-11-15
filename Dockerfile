@@ -9,5 +9,5 @@ LABEL authors="leoscrowi"
 FROM scratch
 COPY --from=build /src/main /main
 COPY --from=build /src/migrations /migrations
-EXPOSE 8080
+EXPOSE 6060
 CMD ["/main"]

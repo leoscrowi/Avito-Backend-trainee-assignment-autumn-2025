@@ -60,7 +60,7 @@ func (u *Usecase) AddTeam(ctx context.Context, team *domain.Team) (domain.Team, 
 			UserID:   teamMember.UserID,
 			Username: teamMember.UserName,
 			TeamName: team.TeamName,
-			IsActive: true,
+			IsActive: teamMember.IsActive,
 		}
 		_, err = u.UsersRepository.CreateOrUpdateUser(ctx, &user)
 		if err != nil {

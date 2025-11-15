@@ -18,7 +18,7 @@ type Repository struct {
 	db *sqlx.DB
 }
 
-func NewRepository(db *sqlx.DB) *Repository {
+func NewUsersRepository(db *sqlx.DB) *Repository {
 	return &Repository{db: db}
 }
 
@@ -41,6 +41,7 @@ func (r *Repository) SetIsActive(ctx context.Context, userID string, isActive bo
 	query, args, err := sq.Update(tableName).
 		Set("is_active", isActive).
 		Where(sq.Eq{"user_id": userID}).
+		PlaceholderFormat(sq.Dollar).
 		ToSql()
 
 	if err != nil {
@@ -82,6 +83,7 @@ func (r *Repository) CreateOrUpdateUser(ctx context.Context, user *domain.User) 
 			"username = EXCLUDED.username, " +
 			"team_name = EXCLUDED.team_name, " +
 			"is_active = EXCLUDED.is_active").
+		PlaceholderFormat(sq.Dollar).
 		ToSql()
 
 	if err != nil {
@@ -116,7 +118,7 @@ func (r *Repository) FetchByTeamName(ctx context.Context, teamName string) ([]do
 		_ = tx.Rollback()
 	}(tx)
 
-	query, args, err := sq.Select("user_id", "username", "is_active").From(tableName).Where(sq.Eq{"team_name": teamName}).ToSql()
+	query, args, err := sq.Select("user_id", "username", "is_active").From(tableName).Where(sq.Eq{"team_name": teamName}).PlaceholderFormat(sq.Dollar).ToSql()
 	if err != nil {
 		return fail(domain.INTERNAL, "internal server error", err)
 	}
@@ -175,7 +177,7 @@ func (r *Repository) GetActiveUsersIDByTeam(ctx context.Context, teamName string
 	}(tx)
 
 	query, args, err := sq.Select("user_id").From(tableName).
-		Where(sq.Eq{"team_name": teamName, "is_active": true}).ToSql()
+		Where(sq.Eq{"team_name": teamName, "is_active": true}).PlaceholderFormat(sq.Dollar).ToSql()
 	if err != nil {
 		return fail(domain.INTERNAL, "internal server error", err)
 	}
@@ -225,7 +227,7 @@ func (r *Repository) FetchByID(ctx context.Context, userID string) (domain.User,
 		_ = tx.Rollback()
 	}(tx)
 
-	query, args, err := sq.Select("user_id", "username", "team_name", "is_active").From(tableName).Where(sq.Eq{"user_id": userID}).ToSql()
+	query, args, err := sq.Select("user_id", "username", "team_name", "is_active").From(tableName).Where(sq.Eq{"user_id": userID}).PlaceholderFormat(sq.Dollar).ToSql()
 	if err != nil {
 		return fail(domain.INTERNAL, "internal server error", err)
 	}

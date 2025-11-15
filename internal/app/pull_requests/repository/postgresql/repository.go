@@ -18,7 +18,7 @@ type Repository struct {
 	db *sqlx.DB
 }
 
-func NewRepository(db *sqlx.DB) *Repository {
+func NewPullRequestsRepository(db *sqlx.DB) *Repository {
 	return &Repository{db: db}
 }
 
@@ -55,6 +55,7 @@ func (r *Repository) CreatePullRequest(ctx context.Context, pr *domain.PullReque
 			len(pr.AssignedReviewers) < 2,
 			time.Now(),
 		).
+		PlaceholderFormat(sq.Dollar).
 		ToSql()
 	if err != nil {
 		return fail(domain.INTERNAL, "internal server error", err)
@@ -92,7 +93,7 @@ func (r *Repository) FindPullRequestsByUserID(ctx context.Context, userID string
 		"pull_request_name",
 		"author_id",
 		"status",
-	).From(tableName).Where(sq.Eq{"author_id": userID}).ToSql()
+	).From(tableName).Where(sq.Eq{"author_id": userID}).PlaceholderFormat(sq.Dollar).ToSql()
 	if err != nil {
 		return fail(domain.INTERNAL, "internal server error", err)
 	}
@@ -157,6 +158,7 @@ func (r *Repository) MergePullRequest(ctx context.Context, prID string) (domain.
 		Set("merged_at", time.Now()).
 		Where(sq.Eq{"pull_request_id": prID}).
 		Suffix("RETURNING pull_request_id, pull_request_name, author_id, status, merged_at").
+		PlaceholderFormat(sq.Dollar).
 		ToSql()
 	if err != nil {
 		return fail(domain.INTERNAL, "internal server error", err)
@@ -171,6 +173,7 @@ func (r *Repository) MergePullRequest(ctx context.Context, prID string) (domain.
 	query, args, err = sq.Select("reviewer_id").
 		From(reviewersTableName).
 		Where(sq.Eq{"pull_request_id": prID}).
+		PlaceholderFormat(sq.Dollar).
 		ToSql()
 	if err != nil {
 		return fail(domain.INTERNAL, "internal server error", err)
@@ -212,7 +215,7 @@ func (r *Repository) IsMerged(ctx context.Context, prID string) (bool, error) {
 		_ = tx.Rollback()
 	}(tx)
 
-	query, args, err := sq.Select("pull_request_id").From(tableName).Where(sq.Eq{"pull_request_id": prID}).Limit(1).ToSql()
+	query, args, err := sq.Select("pull_request_id").From(tableName).Where(sq.Eq{"pull_request_id": prID}).Limit(1).PlaceholderFormat(sq.Dollar).ToSql()
 	if err != nil {
 		return fail(domain.INTERNAL, "internal server error", err)
 	}
@@ -247,7 +250,9 @@ func (r *Repository) FetchByID(ctx context.Context, prID string) (domain.PullReq
 		_ = tx.Rollback()
 	}(tx)
 
-	query, args, err := sq.Select("pull_request_id", "pull_request_name", "author_id", "status").From(tableName).Where(sq.Eq{"pull_request_id": prID}).Limit(1).ToSql()
+	query, args, err := sq.Select("pull_request_id", "pull_request_name", "author_id", "status").
+		From(tableName).Where(sq.Eq{"pull_request_id": prID}).
+		Limit(1).PlaceholderFormat(sq.Dollar).ToSql()
 	if err != nil {
 		return fail(domain.INTERNAL, "internal server error", err)
 	}
@@ -264,6 +269,7 @@ func (r *Repository) FetchByID(ctx context.Context, prID string) (domain.PullReq
 	query, args, err = sq.Select("reviewer_id").
 		From(reviewersTableName).
 		Where(sq.Eq{"pull_request_id": prID}).
+		PlaceholderFormat(sq.Dollar).
 		ToSql()
 	if err != nil {
 		return fail(domain.INTERNAL, "internal server error", err)

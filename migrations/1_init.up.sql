@@ -21,7 +21,7 @@ CREATE TABLE pull_requests (
 
 CREATE TABLE pull_request_reviewers (
     pull_request_id TEXT NOT NULL REFERENCES pull_requests(pull_request_id) ON DELETE CASCADE,
-    reviewer_id UUID NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+    reviewer_id TEXT NOT NULL REFERENCES users (user_id) ON DELETE CASCADE,
     PRIMARY KEY (pull_request_id, reviewer_id)
 );
 

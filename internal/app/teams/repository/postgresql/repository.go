@@ -15,7 +15,7 @@ type Repository struct {
 	db *sqlx.DB
 }
 
-func NewRepository(db *sqlx.DB) *Repository {
+func NewTeamsRepository(db *sqlx.DB) *Repository {
 	return &Repository{db: db}
 }
 
@@ -35,7 +35,7 @@ func (r *Repository) FetchTeamByName(ctx context.Context, teamName string) (doma
 		_ = tx.Rollback()
 	}(tx)
 
-	query, args, err := sq.Select("team_name").From(tableName).Where(sq.Eq{"team_name": teamName}).ToSql()
+	query, args, err := sq.Select("team_name").From(tableName).Where(sq.Eq{"team_name": teamName}).PlaceholderFormat(sq.Dollar).ToSql()
 	if err != nil {
 		return fail(domain.INTERNAL, "internal server error", err)
 	}
@@ -78,7 +78,9 @@ func (r *Repository) CreateTeam(ctx context.Context, team *domain.Team) error {
 
 	query, args, err := sq.Insert(tableName).
 		Columns("team_name").
-		Values(team.TeamName).ToSql()
+		Values(team.TeamName).
+		PlaceholderFormat(sq.Dollar).
+		ToSql()
 	if err != nil {
 		return fail(domain.INTERNAL, "internal server error", err)
 	}
