@@ -7,7 +7,7 @@ import (
 )
 
 type Usecase interface {
-	ReassignPullRequest(ctx context.Context, pullRequestID string, oldUserID string) (domain.PullRequest, error)
+	ReassignPullRequest(ctx context.Context, pullRequestID string, oldUserID string) (domain.PullRequest, string, error)
 	MergePullRequest(ctx context.Context, pullRequestID string) (domain.PullRequest, error)
 	CreatePullRequest(ctx context.Context, pullRequest *domain.PullRequest) (domain.PullRequest, error)
 }

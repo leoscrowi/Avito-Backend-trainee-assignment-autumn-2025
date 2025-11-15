@@ -2,7 +2,6 @@ package usecase
 
 import (
 	"context"
-	"fmt"
 	"log"
 
 	"github.com/leoscrowi/pr-assignment-service/domain"
@@ -10,21 +9,21 @@ import (
 	"github.com/leoscrowi/pr-assignment-service/internal/app/users"
 )
 
-type Usecase struct {
+type usecase struct {
 	PullRequestRepository pull_requests.Repository
 	UsersRepository       users.Repository
 }
 
-func NewUsecase(prRepository pull_requests.Repository, usRepository users.Repository) *Usecase {
-	return &Usecase{PullRequestRepository: prRepository, UsersRepository: usRepository}
+func NewUsecase(prRepository pull_requests.Repository, usRepository users.Repository) *usecase {
+	return &usecase{PullRequestRepository: prRepository, UsersRepository: usRepository}
 }
 
-func (u *Usecase) ReassignPullRequest(ctx context.Context, pullRequestID string, oldUserID string) (domain.PullRequest, error) {
+func (u *usecase) ReassignPullRequest(ctx context.Context, pullRequestID string, oldUserID string) (domain.PullRequest, string, error) {
 	const op = "pull_request.Usecase.ReassignPullRequest"
 
-	fail := func(code domain.ErrorCode, message string, err error) (domain.PullRequest, error) {
+	fail := func(code domain.ErrorCode, message string, err error) (domain.PullRequest, string, error) {
 		log.Printf("%s: %v\n", op, err)
-		return domain.PullRequest{}, domain.NewError(code, message, err)
+		return domain.PullRequest{}, "", domain.NewError(code, message, err)
 	}
 
 	pr, err := u.PullRequestRepository.FetchByID(ctx, pullRequestID)
@@ -40,6 +39,7 @@ func (u *Usecase) ReassignPullRequest(ctx context.Context, pullRequestID string,
 	if err != nil {
 		return fail(domain.NOT_ASSIGNED, "reviewer is not assigned to this PR", err)
 	}
+
 	for _, rev := range revs {
 		if rev == oldUserID {
 			err = u.PullRequestRepository.DeleteReviewer(ctx, pullRequestID, oldUserID)
@@ -82,13 +82,13 @@ func (u *Usecase) ReassignPullRequest(ctx context.Context, pullRequestID string,
 				return fail(domain.NOT_ASSIGNED, "reviewer is not assigned to this PR", err)
 			}
 
-			return pr, nil
+			return pr, addUserID, nil
 		}
 	}
-	return domain.PullRequest{}, fmt.Errorf("can't find user or pr")
+	return fail(domain.NOT_FOUND, "resource is not found", err)
 }
 
-func (u *Usecase) MergePullRequest(ctx context.Context, pullRequestID string) (domain.PullRequest, error) {
+func (u *usecase) MergePullRequest(ctx context.Context, pullRequestID string) (domain.PullRequest, error) {
 	const op = "pull_request.Usecase.MergePullRequest"
 
 	fail := func(code domain.ErrorCode, message string, err error) (domain.PullRequest, error) {
@@ -104,7 +104,7 @@ func (u *Usecase) MergePullRequest(ctx context.Context, pullRequestID string) (d
 	return pr, nil
 }
 
-func (u *Usecase) CreatePullRequest(ctx context.Context, pullRequest *domain.PullRequest) (domain.PullRequest, error) {
+func (u *usecase) CreatePullRequest(ctx context.Context, pullRequest *domain.PullRequest) (domain.PullRequest, error) {
 	const op = "pull_request.Usecase.CreatePullRequest"
 
 	fail := func(code domain.ErrorCode, message string, err error) (domain.PullRequest, error) {
