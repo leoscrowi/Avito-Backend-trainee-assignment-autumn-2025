@@ -2,7 +2,7 @@ package postgresql
 
 import (
 	"context"
-	"fmt"
+	"log"
 
 	sq "github.com/Masterminds/squirrel"
 	"github.com/jmoiron/sqlx"
@@ -22,11 +22,14 @@ func NewRepository(db *sqlx.DB) *Repository {
 func (r *Repository) FetchTeamByName(ctx context.Context, teamName string) (domain.Team, error) {
 	const op = "teams.Repository.FetchByName"
 
-	fail := func(err error) (domain.Team, error) { return domain.Team{}, fmt.Errorf("%s: %v", op, err) }
+	fail := func(code domain.ErrorCode, message string, err error) (domain.Team, error) {
+		log.Printf("%s: %v", op, err)
+		return domain.Team{}, domain.NewError(code, message, err)
+	}
 
 	tx, err := r.db.BeginTxx(ctx, nil)
 	if err != nil {
-		return fail(err)
+		return fail(domain.INTERNAL, "internal server error", err)
 	}
 	defer func(tx *sqlx.Tx) {
 		_ = tx.Rollback()
@@ -34,12 +37,12 @@ func (r *Repository) FetchTeamByName(ctx context.Context, teamName string) (doma
 
 	query, args, err := sq.Select("team_name").From(tableName).Where(sq.Eq{"team_name": teamName}).ToSql()
 	if err != nil {
-		return fail(err)
+		return fail(domain.INTERNAL, "internal server error", err)
 	}
 
 	rows, err := tx.QueryxContext(ctx, query, args...)
 	if err != nil {
-		return fail(err)
+		return fail(domain.INTERNAL, "internal server error", err)
 	}
 	defer func(rows *sqlx.Rows) {
 		_ = rows.Close()
@@ -47,11 +50,11 @@ func (r *Repository) FetchTeamByName(ctx context.Context, teamName string) (doma
 
 	var team domain.Team
 	if err = tx.GetContext(ctx, &team, query, args...); err != nil {
-		return fail(err)
+		return fail(domain.INTERNAL, "internal server error", err)
 	}
 
 	if err = tx.Commit(); err != nil {
-		return fail(err)
+		return fail(domain.INTERNAL, "can't commit the transaction", err)
 	}
 
 	return team, nil
@@ -60,11 +63,14 @@ func (r *Repository) FetchTeamByName(ctx context.Context, teamName string) (doma
 func (r *Repository) CreateTeam(ctx context.Context, team *domain.Team) error {
 	const op = "teams.Repository.CreateTeam"
 
-	fail := func(err error) error { return fmt.Errorf("%s: %v", op, err) }
+	fail := func(code domain.ErrorCode, message string, err error) error {
+		log.Printf("%s: %v", op, err)
+		return domain.NewError(code, message, err)
+	}
 
 	tx, err := r.db.BeginTxx(ctx, nil)
 	if err != nil {
-		return fail(err)
+		return fail(domain.INTERNAL, "internal server error", err)
 	}
 	defer func(tx *sqlx.Tx) {
 		_ = tx.Rollback()
@@ -74,16 +80,16 @@ func (r *Repository) CreateTeam(ctx context.Context, team *domain.Team) error {
 		Columns("team_name").
 		Values(team.TeamName).ToSql()
 	if err != nil {
-		return fail(err)
+		return fail(domain.INTERNAL, "internal server error", err)
 	}
 
 	_, err = tx.ExecContext(ctx, query, args...)
 	if err != nil {
-		return fail(err)
+		return fail(domain.INTERNAL, "internal server error", err)
 	}
 
 	if err = tx.Commit(); err != nil {
-		return fail(err)
+		return fail(domain.INTERNAL, "can't commit the transaction", err)
 	}
 
 	return nil

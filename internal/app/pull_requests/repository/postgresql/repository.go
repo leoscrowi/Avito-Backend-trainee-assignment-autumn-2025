@@ -4,7 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-	"fmt"
+	"log"
 	"time"
 
 	sq "github.com/Masterminds/squirrel"
@@ -25,17 +25,14 @@ func NewRepository(db *sqlx.DB) *Repository {
 func (r *Repository) CreatePullRequest(ctx context.Context, pr *domain.PullRequest) error {
 	const op = "pull_requests.Repository.CreatePullRequest"
 
-	fail := func(err error) error {
-		return fmt.Errorf("%s: %v", op, err)
-	}
-
-	if pr == nil {
-		return fmt.Errorf("pull request is nil")
+	fail := func(code domain.ErrorCode, message string, err error) error {
+		log.Printf("%s: %v", op, err)
+		return domain.NewError(code, message, err)
 	}
 
 	tx, err := r.db.BeginTxx(ctx, nil)
 	if err != nil {
-		return fail(err)
+		return fail(domain.INTERNAL, "internal server error", err)
 	}
 	defer func(tx *sqlx.Tx) {
 		_ = tx.Rollback()
@@ -60,15 +57,15 @@ func (r *Repository) CreatePullRequest(ctx context.Context, pr *domain.PullReque
 		).
 		ToSql()
 	if err != nil {
-		return fail(err)
+		return fail(domain.INTERNAL, "internal server error", err)
 	}
 
 	if _, err = tx.ExecContext(ctx, query, args...); err != nil {
-		return fail(err)
+		return fail(domain.INTERNAL, "internal server error", err)
 	}
 
 	if err = tx.Commit(); err != nil {
-		return fail(err)
+		return fail(domain.INTERNAL, "internal server error", err)
 	}
 
 	return nil
@@ -77,13 +74,14 @@ func (r *Repository) CreatePullRequest(ctx context.Context, pr *domain.PullReque
 func (r *Repository) FindPullRequestsByUserID(ctx context.Context, userID string) ([]domain.PullRequestShort, error) {
 	const op = "pull_requests.Repository.FindPullRequestsByUserID"
 
-	fail := func(err error) ([]domain.PullRequestShort, error) {
-		return []domain.PullRequestShort{}, fmt.Errorf("%s: %v", op, err)
+	fail := func(code domain.ErrorCode, message string, err error) ([]domain.PullRequestShort, error) {
+		log.Printf("%s: %v", op, err)
+		return []domain.PullRequestShort{}, domain.NewError(code, message, err)
 	}
 
 	tx, err := r.db.BeginTxx(ctx, nil)
 	if err != nil {
-		return fail(err)
+		return fail(domain.INTERNAL, "internal server error", err)
 	}
 	defer func(tx *sqlx.Tx) {
 		_ = tx.Rollback()
@@ -96,12 +94,12 @@ func (r *Repository) FindPullRequestsByUserID(ctx context.Context, userID string
 		"status",
 	).From(tableName).Where(sq.Eq{"author_id": userID}).ToSql()
 	if err != nil {
-		return fail(err)
+		return fail(domain.INTERNAL, "internal server error", err)
 	}
 
 	rows, err := tx.QueryxContext(ctx, query, args...)
 	if err != nil {
-		return fail(err)
+		return fail(domain.INTERNAL, "internal server error", err)
 	}
 	defer func(rows *sqlx.Rows) {
 		_ = rows.Close()
@@ -115,7 +113,7 @@ func (r *Repository) FindPullRequestsByUserID(ctx context.Context, userID string
 		var status domain.Status
 
 		if err = rows.Scan(&pullRequestID, &pullRequestName, &authorID, &status); err != nil {
-			return fail(err)
+			return fail(domain.INTERNAL, "internal server error", err)
 		}
 
 		pr := domain.PullRequestShort{
@@ -128,11 +126,11 @@ func (r *Repository) FindPullRequestsByUserID(ctx context.Context, userID string
 	}
 
 	if err = rows.Err(); err != nil {
-		return fail(err)
+		return fail(domain.INTERNAL, "internal server error", err)
 	}
 
 	if err = tx.Commit(); err != nil {
-		return fail(err)
+		return fail(domain.INTERNAL, "internal server error", err)
 	}
 
 	return result, nil
@@ -141,13 +139,14 @@ func (r *Repository) FindPullRequestsByUserID(ctx context.Context, userID string
 func (r *Repository) MergePullRequest(ctx context.Context, prID string) (domain.PullRequest, error) {
 	const op = "pull_requests.Repository.MergePullRequest"
 
-	fail := func(err error) (domain.PullRequest, error) {
-		return domain.PullRequest{}, fmt.Errorf("%s: %v", op, err)
+	fail := func(code domain.ErrorCode, message string, err error) (domain.PullRequest, error) {
+		log.Printf("%s: %v", op, err)
+		return domain.PullRequest{}, domain.NewError(code, message, err)
 	}
 
 	tx, err := r.db.BeginTxx(ctx, nil)
 	if err != nil {
-		return fail(err)
+		return fail(domain.INTERNAL, "internal server error", err)
 	}
 	defer func(tx *sqlx.Tx) {
 		_ = tx.Rollback()
@@ -160,12 +159,12 @@ func (r *Repository) MergePullRequest(ctx context.Context, prID string) (domain.
 		Suffix("RETURNING pull_request_id, pull_request_name, author_id, status, merged_at").
 		ToSql()
 	if err != nil {
-		return fail(err)
+		return fail(domain.INTERNAL, "internal server error", err)
 	}
 
 	var pr domain.PullRequest
 	if err = tx.GetContext(ctx, &pr, query, args...); err != nil {
-		return fail(err)
+		return fail(domain.INTERNAL, "internal server error", err)
 	}
 
 	var reviewers []string
@@ -174,7 +173,7 @@ func (r *Repository) MergePullRequest(ctx context.Context, prID string) (domain.
 		Where(sq.Eq{"pull_request_id": prID}).
 		ToSql()
 	if err = tx.SelectContext(ctx, &reviewers, query, args...); err != nil {
-		return fail(err)
+		return fail(domain.INTERNAL, "internal server error", err)
 	}
 
 	updated := domain.PullRequest{
@@ -187,7 +186,7 @@ func (r *Repository) MergePullRequest(ctx context.Context, prID string) (domain.
 	}
 
 	if err = tx.Commit(); err != nil {
-		return fail(err)
+		return fail(domain.INTERNAL, "internal server error", err)
 	}
 
 	return updated, nil
@@ -196,13 +195,14 @@ func (r *Repository) MergePullRequest(ctx context.Context, prID string) (domain.
 func (r *Repository) IsMerged(ctx context.Context, prID string) (bool, error) {
 	const op = "pull_requests.Repository.IsMerged"
 
-	fail := func(err error) (bool, error) {
-		return false, fmt.Errorf("%s: %v", op, err)
+	fail := func(code domain.ErrorCode, message string, err error) (bool, error) {
+		log.Printf("%s: %v", op, err)
+		return false, domain.NewError(code, message, err)
 	}
 
 	tx, err := r.db.BeginTxx(ctx, nil)
 	if err != nil {
-		return fail(err)
+		return fail(domain.INTERNAL, "internal server error", err)
 	}
 	defer func(tx *sqlx.Tx) {
 		_ = tx.Rollback()
@@ -210,19 +210,70 @@ func (r *Repository) IsMerged(ctx context.Context, prID string) (bool, error) {
 
 	query, args, err := sq.Select("pull_request_id").From(tableName).Where(sq.Eq{"pull_request_id": prID}).Limit(1).ToSql()
 	if err != nil {
-		return fail(err)
+		return fail(domain.INTERNAL, "internal server error", err)
 	}
 
 	var pr domain.PullRequest
 	if err = tx.GetContext(ctx, &pr, query, args...); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			if commitErr := tx.Commit(); commitErr != nil {
-				return fail(commitErr)
+				return fail(domain.INTERNAL, "internal server error", err)
 			}
 			return false, nil
 		}
-		return fail(err)
+		return fail(domain.INTERNAL, "internal server error", err)
 	}
 
 	return pr.Status == domain.MERGED, nil
+}
+
+func (r *Repository) FetchByID(ctx context.Context, prID string) (domain.PullRequest, error) {
+	const op = "pull_requests.Repository.CreatePullRequest"
+
+	fail := func(code domain.ErrorCode, message string, err error) (domain.PullRequest, error) {
+		log.Printf("%s: %v", op, err)
+		return domain.PullRequest{}, domain.NewError(code, message, err)
+	}
+
+	tx, err := r.db.BeginTxx(ctx, nil)
+	if err != nil {
+		return fail(domain.INTERNAL, "internal server error", err)
+	}
+	defer func(tx *sqlx.Tx) {
+		_ = tx.Rollback()
+	}(tx)
+
+	query, args, err := sq.Select("pull_request_id", "pull_request_name", "author_id", "status").From(tableName).Where(sq.Eq{"pull_request_id": prID}).Limit(1).ToSql()
+	if err != nil {
+		return fail(domain.INTERNAL, "internal server error", err)
+	}
+
+	var pr domain.PullRequest
+	if err = tx.GetContext(ctx, &pr, query, args...); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return fail(domain.NOT_FOUND, "resource not found", err)
+		}
+		return fail(domain.INTERNAL, "internal server error", err)
+	}
+
+	if err = tx.Commit(); err != nil {
+		return fail(domain.INTERNAL, "internal server error", err)
+	}
+
+	var reviewers []string
+	query, args, err = sq.Select("reviewer_id").
+		From(reviewersTableName).
+		Where(sq.Eq{"pull_request_id": prID}).
+		ToSql()
+	if err = tx.SelectContext(ctx, &reviewers, query, args...); err != nil {
+		return fail(domain.INTERNAL, "internal server error", err)
+	}
+
+	pr.AssignedReviewers = reviewers
+
+	if err = tx.Commit(); err != nil {
+		return fail(domain.INTERNAL, "internal server error", err)
+	}
+
+	return pr, nil
 }
