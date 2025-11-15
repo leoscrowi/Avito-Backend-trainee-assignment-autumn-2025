@@ -15,7 +15,7 @@ func (r *Repository) GetReviewersID(ctx context.Context, prID string) ([]string,
 	const op = "pull_requests.Repository.GetReviewersID"
 
 	fail := func(code domain.ErrorCode, message string, err error) ([]string, error) {
-		log.Printf("%s: %v", op, err)
+		log.Printf("%s: %v\n", op, err)
 		return nil, domain.NewError(code, message, err)
 	}
 
@@ -63,7 +63,7 @@ func (r *Repository) DeleteReviewer(ctx context.Context, prID, reviewerID string
 	const op = "pull_requests.Repository.DeleteReviewer"
 
 	fail := func(code domain.ErrorCode, message string, err error) error {
-		log.Printf("%s: %v", op, err)
+		log.Printf("%s: %v\n", op, err)
 		return domain.NewError(code, message, err)
 	}
 
@@ -95,7 +95,7 @@ func (r *Repository) AddReviewer(ctx context.Context, prID, reviewerID string) e
 	const op = "pull_requests.Repository.AddReviewer"
 
 	fail := func(code domain.ErrorCode, message string, err error) error {
-		log.Printf("%s: %v", op, err)
+		log.Printf("%s: %v\n", op, err)
 		return domain.NewError(code, message, err)
 	}
 

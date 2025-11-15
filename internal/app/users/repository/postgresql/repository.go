@@ -26,7 +26,7 @@ func (r *Repository) SetIsActive(ctx context.Context, userID string, isActive bo
 	const op = "users.Repository.SetIsActive"
 
 	fail := func(code domain.ErrorCode, message string, err error) error {
-		log.Printf("%s: %v", op, err)
+		log.Printf("%s: %v\n", op, err)
 		return domain.NewError(code, message, err)
 	}
 
@@ -63,7 +63,7 @@ func (r *Repository) CreateOrUpdateUser(ctx context.Context, user *domain.User) 
 	const op = "users.Repository.CreateOrUpdateUser"
 
 	fail := func(code domain.ErrorCode, message string, err error) (string, error) {
-		log.Printf("%s: %v", op, err)
+		log.Printf("%s: %v\n", op, err)
 		return "", domain.NewError(code, message, err)
 	}
 
@@ -104,7 +104,7 @@ func (r *Repository) FetchByTeamName(ctx context.Context, teamName string) ([]do
 	const op = "users.Repository.FetchByTeamName"
 
 	fail := func(code domain.ErrorCode, message string, err error) ([]domain.TeamMember, error) {
-		log.Printf("%s: %v", op, err)
+		log.Printf("%s: %v\n", op, err)
 		return nil, domain.NewError(code, message, err)
 	}
 
@@ -162,7 +162,7 @@ func (r *Repository) GetActiveUsersIDByTeam(ctx context.Context, teamName string
 	const op = "users.Repository.GetActiveUsersIDByTeam"
 
 	fail := func(code domain.ErrorCode, message string, err error) ([]string, error) {
-		log.Printf("%s: %v", op, err)
+		log.Printf("%s: %v\n", op, err)
 		return nil, domain.NewError(code, message, err)
 	}
 
@@ -213,7 +213,7 @@ func (r *Repository) FetchByID(ctx context.Context, userID string) (domain.User,
 	const op = "users.Repository.FetchByID"
 
 	fail := func(code domain.ErrorCode, message string, err error) (domain.User, error) {
-		log.Printf("%s: %v", op, err)
+		log.Printf("%s: %v\n", op, err)
 		return domain.User{}, domain.NewError(code, message, err)
 	}
 

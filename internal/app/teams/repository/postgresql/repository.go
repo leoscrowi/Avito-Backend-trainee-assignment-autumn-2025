@@ -23,7 +23,7 @@ func (r *Repository) FetchTeamByName(ctx context.Context, teamName string) (doma
 	const op = "teams.Repository.FetchByName"
 
 	fail := func(code domain.ErrorCode, message string, err error) (domain.Team, error) {
-		log.Printf("%s: %v", op, err)
+		log.Printf("%s: %v\n", op, err)
 		return domain.Team{}, domain.NewError(code, message, err)
 	}
 
@@ -64,7 +64,7 @@ func (r *Repository) CreateTeam(ctx context.Context, team *domain.Team) error {
 	const op = "teams.Repository.CreateTeam"
 
 	fail := func(code domain.ErrorCode, message string, err error) error {
-		log.Printf("%s: %v", op, err)
+		log.Printf("%s: %v\n", op, err)
 		return domain.NewError(code, message, err)
 	}
 

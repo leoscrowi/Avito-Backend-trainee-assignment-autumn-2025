@@ -26,7 +26,7 @@ func (r *Repository) CreatePullRequest(ctx context.Context, pr *domain.PullReque
 	const op = "pull_requests.Repository.CreatePullRequest"
 
 	fail := func(code domain.ErrorCode, message string, err error) error {
-		log.Printf("%s: %v", op, err)
+		log.Printf("%s: %v\n", op, err)
 		return domain.NewError(code, message, err)
 	}
 
@@ -75,7 +75,7 @@ func (r *Repository) FindPullRequestsByUserID(ctx context.Context, userID string
 	const op = "pull_requests.Repository.FindPullRequestsByUserID"
 
 	fail := func(code domain.ErrorCode, message string, err error) ([]domain.PullRequestShort, error) {
-		log.Printf("%s: %v", op, err)
+		log.Printf("%s: %v\n", op, err)
 		return []domain.PullRequestShort{}, domain.NewError(code, message, err)
 	}
 
@@ -140,7 +140,7 @@ func (r *Repository) MergePullRequest(ctx context.Context, prID string) (domain.
 	const op = "pull_requests.Repository.MergePullRequest"
 
 	fail := func(code domain.ErrorCode, message string, err error) (domain.PullRequest, error) {
-		log.Printf("%s: %v", op, err)
+		log.Printf("%s: %v\n", op, err)
 		return domain.PullRequest{}, domain.NewError(code, message, err)
 	}
 
@@ -196,7 +196,7 @@ func (r *Repository) IsMerged(ctx context.Context, prID string) (bool, error) {
 	const op = "pull_requests.Repository.IsMerged"
 
 	fail := func(code domain.ErrorCode, message string, err error) (bool, error) {
-		log.Printf("%s: %v", op, err)
+		log.Printf("%s: %v\n", op, err)
 		return false, domain.NewError(code, message, err)
 	}
 
@@ -231,7 +231,7 @@ func (r *Repository) FetchByID(ctx context.Context, prID string) (domain.PullReq
 	const op = "pull_requests.Repository.CreatePullRequest"
 
 	fail := func(code domain.ErrorCode, message string, err error) (domain.PullRequest, error) {
-		log.Printf("%s: %v", op, err)
+		log.Printf("%s: %v\n", op, err)
 		return domain.PullRequest{}, domain.NewError(code, message, err)
 	}
 

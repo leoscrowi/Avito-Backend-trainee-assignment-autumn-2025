@@ -3,6 +3,7 @@ package usecase
 import (
 	"context"
 	"fmt"
+	"log"
 
 	"github.com/leoscrowi/pr-assignment-service/domain"
 	"github.com/leoscrowi/pr-assignment-service/internal/app/pull_requests"
@@ -19,36 +20,45 @@ func NewUsecase(prRepository pull_requests.Repository, usRepository users.Reposi
 }
 
 func (u *Usecase) ReassignPullRequest(ctx context.Context, pullRequestID string, oldUserID string) (domain.PullRequest, error) {
+	const op = "pull_request.Usecase.ReassignPullRequest"
+
+	fail := func(code domain.ErrorCode, message string, err error) (domain.PullRequest, error) {
+		log.Printf("%s: %v\n", op, err)
+		return domain.PullRequest{}, domain.NewError(code, message, err)
+	}
 
 	pr, err := u.PullRequestRepository.FetchByID(ctx, pullRequestID)
 	if err != nil {
-		return domain.PullRequest{}, err
+		return fail(domain.NOT_FOUND, "resource not found", err)
 	}
 
 	if pr.Status == domain.MERGED {
-		return domain.PullRequest{}, fmt.Errorf("Merged")
+		return fail(domain.NOT_ASSIGNED, "reviewer is not assigned to this PR", err)
 	}
 
 	revs, err := u.PullRequestRepository.GetReviewersID(ctx, pullRequestID)
+	if err != nil {
+		return fail(domain.NOT_ASSIGNED, "reviewer is not assigned to this PR", err)
+	}
 	for _, rev := range revs {
 		if rev == oldUserID {
 			err = u.PullRequestRepository.DeleteReviewer(ctx, pullRequestID, oldUserID)
 			if err != nil {
-				return domain.PullRequest{}, err
+				return fail(domain.NOT_ASSIGNED, "reviewer is not assigned to this PR", err)
 			}
 
 			user, err := u.UsersRepository.FetchByID(ctx, oldUserID)
 			if err != nil {
-				return domain.PullRequest{}, err
+				return fail(domain.NOT_FOUND, "resource not found", err)
 			}
 
 			activeUsers, err := u.UsersRepository.GetActiveUsersIDByTeam(ctx, user.TeamName)
 			if err != nil {
-				return domain.PullRequest{}, err
+				return fail(domain.NOT_ASSIGNED, "reviewer is not assigned to this PR", err)
 			}
 
 			if len(activeUsers) == 0 {
-				return domain.PullRequest{}, fmt.Errorf("no active users")
+				return fail(domain.NO_CANDIDATE, "no active replacement candidate in team", err)
 			}
 
 			var addUserID string
@@ -58,14 +68,18 @@ func (u *Usecase) ReassignPullRequest(ctx context.Context, pullRequestID string,
 				}
 			}
 
+			if addUserID == "" {
+				return fail(domain.NO_CANDIDATE, "no active replacement candidate in team", err)
+			}
+
 			err = u.PullRequestRepository.AddReviewer(ctx, pullRequestID, addUserID)
 			if err != nil {
-				return domain.PullRequest{}, err
+				return fail(domain.NOT_ASSIGNED, "reviewer is not assigned to this PR", err)
 			}
 
 			pr, err := u.PullRequestRepository.FetchByID(ctx, pullRequestID)
 			if err != nil {
-				return domain.PullRequest{}, err
+				return fail(domain.NOT_ASSIGNED, "reviewer is not assigned to this PR", err)
 			}
 
 			return pr, nil
@@ -75,23 +89,37 @@ func (u *Usecase) ReassignPullRequest(ctx context.Context, pullRequestID string,
 }
 
 func (u *Usecase) MergePullRequest(ctx context.Context, pullRequestID string) (domain.PullRequest, error) {
-	pr, err := u.PullRequestRepository.MergePullRequest(ctx, pullRequestID)
-	if err != nil {
-		return domain.PullRequest{}, err
+	const op = "pull_request.Usecase.MergePullRequest"
+
+	fail := func(code domain.ErrorCode, message string, err error) (domain.PullRequest, error) {
+		log.Printf("%s: %v\n", op, err)
+		return domain.PullRequest{}, domain.NewError(code, message, err)
 	}
 
-	return pr, err
+	pr, err := u.PullRequestRepository.MergePullRequest(ctx, pullRequestID)
+	if err != nil {
+		return fail(domain.NOT_FOUND, "resource not found", err)
+	}
+
+	return pr, nil
 }
 
 func (u *Usecase) CreatePullRequest(ctx context.Context, pullRequest *domain.PullRequest) (domain.PullRequest, error) {
+	const op = "pull_request.Usecase.CreatePullRequest"
+
+	fail := func(code domain.ErrorCode, message string, err error) (domain.PullRequest, error) {
+		log.Printf("%s: %v\n", op, err)
+		return domain.PullRequest{}, domain.NewError(code, message, err)
+	}
+
 	user, err := u.UsersRepository.FetchByID(ctx, pullRequest.AuthorID)
 	if err != nil {
-		return domain.PullRequest{}, err
+		return fail(domain.NOT_FOUND, "resource not found", err)
 	}
 
 	teamMembersID, err := u.UsersRepository.GetActiveUsersIDByTeam(ctx, user.TeamName)
 	if err != nil {
-		return domain.PullRequest{}, err
+		return fail(domain.NOT_FOUND, "resource not found", err)
 	}
 
 	var reviewers []string
@@ -106,11 +134,11 @@ func (u *Usecase) CreatePullRequest(ctx context.Context, pullRequest *domain.Pul
 	}
 
 	pullRequest.AssignedReviewers = reviewers
-	pullRequest.Status = domain.MERGED
+	pullRequest.Status = domain.OPEN
 
 	err = u.PullRequestRepository.CreatePullRequest(ctx, pullRequest)
 	if err != nil {
-		return domain.PullRequest{}, err
+		return fail(domain.PR_EXISTS, "PR is already exists", err)
 	}
 	return *pullRequest, nil
 }
