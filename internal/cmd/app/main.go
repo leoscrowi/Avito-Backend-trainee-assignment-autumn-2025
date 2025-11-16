@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 
 	"github.com/golang-migrate/migrate/v4"
 	_ "github.com/golang-migrate/migrate/v4/database/postgres"
@@ -17,7 +18,6 @@ import (
 
 func main() {
 	cfg := config.MustLoad()
-	log.Println("[APPLICATION]: loaded config")
 
 	dbUrl := fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=%s",
 		cfg.DatabaseConfig.User,
@@ -28,38 +28,33 @@ func main() {
 		cfg.DatabaseConfig.SslMode,
 	)
 
-	log.Printf("[APPLICATION]: Connecting to database, dbURL: %s", dbUrl)
 	db, err := sqlx.Open("postgres", dbUrl)
 	if err != nil {
-		log.Fatalf("[APPLICATION]: %v", err)
+		log.Fatalf("%v", err)
 	}
 	defer func(db *sqlx.DB) {
 		_ = db.Close()
 	}(db)
 
 	if err = db.Ping(); err != nil {
-		log.Printf("[APPLICATION]: %v", err)
+		log.Printf("%v", err)
 		return
 	}
 
-	log.Printf("[APPLICATION]: Starting migrations")
-	// TODO: заменить потом на сепаратор для пути, т.к. для винды он \\
 	migrations, err := migrate.New(
-		"file://migrations/",
+		"file://migrations"+string(os.PathSeparator),
 		dbUrl,
 	)
 
 	if err != nil {
-		log.Printf("[APPLICATION]: Failed to create migration instance: %v", err)
+		log.Printf("Failed to create migration instance: %v", err)
 		return
 	}
 
 	if err = migrations.Up(); !errors.Is(err, migrate.ErrNoChange) {
-		log.Printf("[APPLICATION]: Failed to up migrations: %v", err)
+		log.Printf("Failed to up migrations: %v", err)
 		return
 	}
-	log.Printf("[APPLICATION]: Migrations successfully created")
-
 	s := server.NewServer(db)
 	s.SetupRoutes(cfg)
 
