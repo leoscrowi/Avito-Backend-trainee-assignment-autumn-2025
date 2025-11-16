@@ -4,10 +4,11 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/jmoiron/sqlx"
+	"github.com/leoscrowi/pr-assignment-service/internal/config"
 )
 
 type RouteSetup interface {
-	SetupRoutes(r chi.Router)
+	SetupRoutes(r chi.Router, cfg *config.Config)
 }
 
 type Server struct {
@@ -27,8 +28,8 @@ func NewServer(db *sqlx.DB) *Server {
 	}
 }
 
-func (s *Server) SetupRoutes() {
+func (s *Server) SetupRoutes(cfg *config.Config) {
 	for _, controller := range s.Controllers {
-		controller.SetupRoutes(s.Router)
+		controller.SetupRoutes(s.Router, cfg)
 	}
 }

@@ -14,6 +14,10 @@ func statusCodeMapper(err *ErrorResponse) int {
 		return 409
 	case BAD_REQUEST:
 		return 400
+	case UNAUTHORIZED:
+		return 401
+	case PR_EXISTS:
+		return 409
 	default:
 		return 500
 	}

@@ -54,6 +54,7 @@ func (c *TeamsController) AddTeam(w http.ResponseWriter, r *http.Request) {
 	newTeam, err := c.usecase.AddTeam(r.Context(), &team)
 	if err != nil {
 		domain.WriteError(w, domain.ConvertToErrorResponse(err))
+		return
 	}
 
 	var resp = dtos.AddTeamResponse{Team: newTeam}

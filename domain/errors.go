@@ -16,8 +16,9 @@ const (
 	NO_CANDIDATE ErrorCode = "No candidate"
 	NOT_FOUND    ErrorCode = "Not found"
 
-	INTERNAL    ErrorCode = "Internal server error"
-	BAD_REQUEST ErrorCode = "Bad request"
+	INTERNAL     ErrorCode = "Internal server error"
+	BAD_REQUEST  ErrorCode = "Bad request"
+	UNAUTHORIZED ErrorCode = "Unauthorized"
 )
 
 type ErrorResponse struct {

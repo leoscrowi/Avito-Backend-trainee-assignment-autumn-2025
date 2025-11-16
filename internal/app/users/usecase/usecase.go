@@ -36,7 +36,7 @@ func (u *Usecase) SetIsActive(ctx context.Context, userID string, isActive bool)
 		return fail(domain.NOT_FOUND, "resource not found", err)
 	}
 
-	user.IsActive = true
+	user.IsActive = isActive
 	return user, nil
 }
 
@@ -48,9 +48,18 @@ func (u *Usecase) GetReview(ctx context.Context, userID string) ([]domain.PullRe
 		return []domain.PullRequestShort{}, domain.NewError(code, message, err)
 	}
 
-	prs, err := u.PullRequestsRepository.FindPullRequestsByUserID(ctx, userID)
+	prs, err := u.PullRequestsRepository.FindPullRequestsIDByUserID(ctx, userID)
 	if err != nil {
 		return fail(domain.INTERNAL, "internal server error", err)
 	}
-	return prs, nil
+
+	result := []domain.PullRequestShort{}
+	for _, prID := range prs {
+		pr, err := u.PullRequestsRepository.FetchShortByID(ctx, prID)
+		if err != nil {
+			return fail(domain.NOT_FOUND, "resource not found", err)
+		}
+		result = append(result, pr)
+	}
+	return result, nil
 }

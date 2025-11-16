@@ -4,6 +4,7 @@ import "os"
 
 type Config struct {
 	DatabaseConfig DatabaseConfig
+	AuthConfig     AuthConfig
 }
 
 type DatabaseConfig struct {
@@ -15,6 +16,11 @@ type DatabaseConfig struct {
 	SslMode  string
 }
 
+type AuthConfig struct {
+	AdminToken string
+	UserToken  string
+}
+
 func MustLoad() *Config {
 	return &Config{
 		DatabaseConfig: DatabaseConfig{
@@ -24,6 +30,10 @@ func MustLoad() *Config {
 			Password: os.Getenv("POSTGRES_PASSWORD"),
 			Name:     os.Getenv("POSTGRES_DB"),
 			SslMode:  os.Getenv("POSTGRES_SSL_MODE"),
+		},
+		AuthConfig: AuthConfig{
+			AdminToken: os.Getenv("ADMIN_TOKEN"),
+			UserToken:  os.Getenv("USER_TOKEN"),
 		},
 	}
 }

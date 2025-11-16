@@ -16,7 +16,6 @@ linters:
     - misspell
     - goconst
     - prealloc
-    - bodyclose
 
 formatters:
   enable:

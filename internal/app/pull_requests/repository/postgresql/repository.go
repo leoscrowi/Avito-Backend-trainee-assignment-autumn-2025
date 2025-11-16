@@ -72,12 +72,12 @@ func (r *Repository) CreatePullRequest(ctx context.Context, pr *domain.PullReque
 	return nil
 }
 
-func (r *Repository) FindPullRequestsByUserID(ctx context.Context, userID string) ([]domain.PullRequestShort, error) {
-	const op = "pull_requests.Repository.FindPullRequestsByUserID"
+func (r *Repository) FindPullRequestsIDByUserID(ctx context.Context, userID string) ([]string, error) {
+	const op = "pull_requests.Repository.FindPullRequestsIDByUserID"
 
-	fail := func(code domain.ErrorCode, message string, err error) ([]domain.PullRequestShort, error) {
+	fail := func(code domain.ErrorCode, message string, err error) ([]string, error) {
 		log.Printf("%s: %v\n", op, err)
-		return []domain.PullRequestShort{}, domain.NewError(code, message, err)
+		return nil, domain.NewError(code, message, err)
 	}
 
 	tx, err := r.db.BeginTxx(ctx, nil)
@@ -90,10 +90,7 @@ func (r *Repository) FindPullRequestsByUserID(ctx context.Context, userID string
 
 	query, args, err := sq.Select(
 		"pull_request_id",
-		"pull_request_name",
-		"author_id",
-		"status",
-	).From(tableName).Where(sq.Eq{"author_id": userID}).PlaceholderFormat(sq.Dollar).ToSql()
+	).From(reviewersTableName).Where(sq.Eq{"reviewer_id": userID}).PlaceholderFormat(sq.Dollar).ToSql()
 	if err != nil {
 		return fail(domain.INTERNAL, "internal server error", err)
 	}
@@ -106,24 +103,15 @@ func (r *Repository) FindPullRequestsByUserID(ctx context.Context, userID string
 		_ = rows.Close()
 	}(rows)
 
-	var result []domain.PullRequestShort
+	var result []string
 	for rows.Next() {
-		var pullRequestID string
-		var pullRequestName string
-		var authorID string
-		var status domain.Status
+		var reviewerID string
 
-		if err = rows.Scan(&pullRequestID, &pullRequestName, &authorID, &status); err != nil {
+		if err = rows.Scan(&reviewerID); err != nil {
 			return fail(domain.INTERNAL, "internal server error", err)
 		}
 
-		pr := domain.PullRequestShort{
-			PullRequestID:   pullRequestID,
-			PullRequestName: pullRequestName,
-			AuthorID:        authorID,
-			Status:          status,
-		}
-		result = append(result, pr)
+		result = append(result, reviewerID)
 	}
 
 	if err = rows.Err(); err != nil {
@@ -199,12 +187,12 @@ func (r *Repository) MergePullRequest(ctx context.Context, prID string) (domain.
 	return updated, nil
 }
 
-func (r *Repository) IsMerged(ctx context.Context, prID string) (bool, error) {
-	const op = "pull_requests.Repository.IsMerged"
+func (r *Repository) FetchByIDWithMergeAt(ctx context.Context, prID string) (domain.PullRequest, error) {
+	const op = "pull_requests.Repository.FetchByIDWithMergedAt"
 
-	fail := func(code domain.ErrorCode, message string, err error) (bool, error) {
+	fail := func(code domain.ErrorCode, message string, err error) (domain.PullRequest, error) {
 		log.Printf("%s: %v\n", op, err)
-		return false, domain.NewError(code, message, err)
+		return domain.PullRequest{}, domain.NewError(code, message, err)
 	}
 
 	tx, err := r.db.BeginTxx(ctx, nil)
@@ -215,7 +203,9 @@ func (r *Repository) IsMerged(ctx context.Context, prID string) (bool, error) {
 		_ = tx.Rollback()
 	}(tx)
 
-	query, args, err := sq.Select("pull_request_id").From(tableName).Where(sq.Eq{"pull_request_id": prID}).Limit(1).PlaceholderFormat(sq.Dollar).ToSql()
+	query, args, err := sq.Select("pull_request_id", "pull_request_name", "author_id", "status", "COALESCE(merged_at, '0001-01-01'::timestamp) as merged_at").
+		From(tableName).Where(sq.Eq{"pull_request_id": prID}).
+		Limit(1).PlaceholderFormat(sq.Dollar).ToSql()
 	if err != nil {
 		return fail(domain.INTERNAL, "internal server error", err)
 	}
@@ -223,19 +213,35 @@ func (r *Repository) IsMerged(ctx context.Context, prID string) (bool, error) {
 	var pr domain.PullRequest
 	if err = tx.GetContext(ctx, &pr, query, args...); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			if commitErr := tx.Commit(); commitErr != nil {
-				return fail(domain.INTERNAL, "internal server error", err)
-			}
-			return false, nil
+			return fail(domain.NOT_FOUND, "resource not found", err)
 		}
 		return fail(domain.INTERNAL, "internal server error", err)
 	}
 
-	return pr.Status == domain.MERGED, nil
+	var reviewers []string
+	query, args, err = sq.Select("reviewer_id").
+		From(reviewersTableName).
+		Where(sq.Eq{"pull_request_id": prID}).
+		PlaceholderFormat(sq.Dollar).
+		ToSql()
+	if err != nil {
+		return fail(domain.INTERNAL, "internal server error", err)
+	}
+	if err = tx.SelectContext(ctx, &reviewers, query, args...); err != nil {
+		return fail(domain.INTERNAL, "internal server error", err)
+	}
+
+	pr.AssignedReviewers = reviewers
+
+	if err = tx.Commit(); err != nil {
+		return fail(domain.INTERNAL, "internal server error", err)
+	}
+
+	return pr, nil
 }
 
 func (r *Repository) FetchByID(ctx context.Context, prID string) (domain.PullRequest, error) {
-	const op = "pull_requests.Repository.CreatePullRequest"
+	const op = "pull_requests.Repository.FetchByID"
 
 	fail := func(code domain.ErrorCode, message string, err error) (domain.PullRequest, error) {
 		log.Printf("%s: %v\n", op, err)
@@ -279,6 +285,41 @@ func (r *Repository) FetchByID(ctx context.Context, prID string) (domain.PullReq
 	}
 
 	pr.AssignedReviewers = reviewers
+
+	if err = tx.Commit(); err != nil {
+		return fail(domain.INTERNAL, "internal server error", err)
+	}
+
+	return pr, nil
+}
+
+func (r *Repository) FetchShortByID(ctx context.Context, prID string) (domain.PullRequestShort, error) {
+	const op = "pull_requests.Repository.FetchShortByID"
+
+	fail := func(code domain.ErrorCode, message string, err error) (domain.PullRequestShort, error) {
+		log.Printf("%s: %v\n", op, err)
+		return domain.PullRequestShort{}, domain.NewError(code, message, err)
+	}
+
+	tx, err := r.db.BeginTxx(ctx, nil)
+	if err != nil {
+		return fail(domain.INTERNAL, "internal server error", err)
+	}
+	defer func(tx *sqlx.Tx) {
+		_ = tx.Rollback()
+	}(tx)
+
+	query, args, err := sq.Select(
+		"pull_request_id", "pull_request_name", "author_id", "status",
+	).From(tableName).Where(sq.Eq{"pull_request_id": prID}).PlaceholderFormat(sq.Dollar).ToSql()
+	if err != nil {
+		return fail(domain.INTERNAL, "internal server error", err)
+	}
+
+	var pr domain.PullRequestShort
+	if err = tx.GetContext(ctx, &pr, query, args...); err != nil {
+		return fail(domain.INTERNAL, "internal server error", err)
+	}
 
 	if err = tx.Commit(); err != nil {
 		return fail(domain.INTERNAL, "internal server error", err)

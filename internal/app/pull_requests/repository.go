@@ -15,7 +15,8 @@ type Repository interface {
 	AddReviewer(ctx context.Context, prID, reviewerID string) error
 
 	FetchByID(ctx context.Context, prID string) (domain.PullRequest, error)
-	IsMerged(ctx context.Context, prID string) (bool, error)
+	FetchByIDWithMergeAt(ctx context.Context, prID string) (domain.PullRequest, error)
+	FetchShortByID(ctx context.Context, prID string) (domain.PullRequestShort, error)
 
-	FindPullRequestsByUserID(ctx context.Context, userID string) ([]domain.PullRequestShort, error)
+	FindPullRequestsIDByUserID(ctx context.Context, userID string) ([]string, error)
 }

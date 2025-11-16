@@ -9,7 +9,7 @@ import (
 	"github.com/leoscrowi/pr-assignment-service/domain"
 )
 
-const reviewersTableName = "pull_requests_reviewers"
+const reviewersTableName = "pull_request_reviewers"
 
 func (r *Repository) GetReviewersID(ctx context.Context, prID string) ([]string, error) {
 	const op = "pull_requests.Repository.GetReviewersID"

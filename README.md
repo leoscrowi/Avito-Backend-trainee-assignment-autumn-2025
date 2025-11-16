@@ -72,3 +72,8 @@ Pull request assignment service
 - chi
 - squirell
 - sqlx
+
+Запуск тестов
+
+- `docker-compose up -d`
+- `docker-compose down -v`

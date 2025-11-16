@@ -40,14 +40,6 @@ func (r *Repository) FetchTeamByName(ctx context.Context, teamName string) (doma
 		return fail(domain.INTERNAL, "internal server error", err)
 	}
 
-	rows, err := tx.QueryxContext(ctx, query, args...)
-	if err != nil {
-		return fail(domain.INTERNAL, "internal server error", err)
-	}
-	defer func(rows *sqlx.Rows) {
-		_ = rows.Close()
-	}(rows)
-
 	var team domain.Team
 	if err = tx.GetContext(ctx, &team, query, args...); err != nil {
 		return fail(domain.INTERNAL, "internal server error", err)

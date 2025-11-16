@@ -1,7 +1,7 @@
 package domain
 
 type Team struct {
-	TeamName string       `json:"team_name"`
+	TeamName string       `json:"team_name" db:"team_name"`
 	Members  []TeamMember `json:"members"`
 }
 

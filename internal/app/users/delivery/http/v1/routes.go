@@ -1,10 +1,14 @@
 package v1
 
-import "github.com/go-chi/chi/v5"
+import (
+	"github.com/go-chi/chi/v5"
+	"github.com/leoscrowi/pr-assignment-service/internal/config"
+	"github.com/leoscrowi/pr-assignment-service/internal/middleware"
+)
 
-func (c *UsersController) SetupRoutes(r chi.Router) {
+func (c *UsersController) SetupRoutes(r chi.Router, cfg *config.Config) {
 	r.Route("/users", func(r chi.Router) {
-		r.Get("/getReview", c.GetReview)
-		r.Patch("/setIsActive", c.SetIsActive)
+		r.With(middleware.AuthMiddleware(cfg)).Get("/getReview", c.GetReview)
+		r.With(middleware.AdminMiddleware(cfg)).Patch("/setIsActive", c.SetIsActive)
 	})
 }

@@ -160,6 +160,42 @@ func (r *Repository) FetchByTeamName(ctx context.Context, teamName string) ([]do
 	return result, nil
 }
 
+func (r *Repository) FetchByID(ctx context.Context, userID string) (domain.User, error) {
+	const op = "users.Repository.FetchByID"
+
+	fail := func(code domain.ErrorCode, message string, err error) (domain.User, error) {
+		log.Printf("%s: %v\n", op, err)
+		return domain.User{}, domain.NewError(code, message, err)
+	}
+
+	tx, err := r.db.BeginTxx(ctx, nil)
+	if err != nil {
+		return fail(domain.INTERNAL, "internal server error", err)
+	}
+	defer func(tx *sqlx.Tx) {
+		_ = tx.Rollback()
+	}(tx)
+
+	query, args, err := sq.Select("user_id", "username", "team_name", "is_active").From(tableName).Where(sq.Eq{"user_id": userID}).PlaceholderFormat(sq.Dollar).ToSql()
+	if err != nil {
+		return fail(domain.INTERNAL, "internal server error", err)
+	}
+
+	var user domain.User
+	if err = tx.GetContext(ctx, &user, query, args...); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return fail(domain.NOT_FOUND, "resource not found", err)
+		}
+		return fail(domain.INTERNAL, "internal server error", err)
+	}
+
+	if err = tx.Commit(); err != nil {
+		return fail(domain.INTERNAL, "internal server error", err)
+	}
+
+	return user, nil
+}
+
 func (r *Repository) GetActiveUsersIDByTeam(ctx context.Context, teamName string) ([]string, error) {
 	const op = "users.Repository.GetActiveUsersIDByTeam"
 
@@ -209,40 +245,4 @@ func (r *Repository) GetActiveUsersIDByTeam(ctx context.Context, teamName string
 	}
 
 	return result, nil
-}
-
-func (r *Repository) FetchByID(ctx context.Context, userID string) (domain.User, error) {
-	const op = "users.Repository.FetchByID"
-
-	fail := func(code domain.ErrorCode, message string, err error) (domain.User, error) {
-		log.Printf("%s: %v\n", op, err)
-		return domain.User{}, domain.NewError(code, message, err)
-	}
-
-	tx, err := r.db.BeginTxx(ctx, nil)
-	if err != nil {
-		return fail(domain.INTERNAL, "internal server error", err)
-	}
-	defer func(tx *sqlx.Tx) {
-		_ = tx.Rollback()
-	}(tx)
-
-	query, args, err := sq.Select("user_id", "username", "team_name", "is_active").From(tableName).Where(sq.Eq{"user_id": userID}).PlaceholderFormat(sq.Dollar).ToSql()
-	if err != nil {
-		return fail(domain.INTERNAL, "internal server error", err)
-	}
-
-	var user domain.User
-	if err = tx.GetContext(ctx, &user, query, args...); err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return fail(domain.NOT_FOUND, "resource not found", err)
-		}
-		return fail(domain.INTERNAL, "internal server error", err)
-	}
-
-	if err = tx.Commit(); err != nil {
-		return fail(domain.INTERNAL, "internal server error", err)
-	}
-
-	return user, nil
 }

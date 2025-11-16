@@ -33,13 +33,14 @@ func main() {
 	if err != nil {
 		log.Fatalf("[APPLICATION]: %v", err)
 	}
-
-	if err = db.Ping(); err != nil {
-		log.Fatalf("[APPLICATION]: %v", err)
-	}
 	defer func(db *sqlx.DB) {
 		_ = db.Close()
 	}(db)
+
+	if err = db.Ping(); err != nil {
+		log.Printf("[APPLICATION]: %v", err)
+		return
+	}
 
 	log.Printf("[APPLICATION]: Starting migrations")
 	// TODO: заменить потом на сепаратор для пути, т.к. для винды он \\
@@ -49,16 +50,18 @@ func main() {
 	)
 
 	if err != nil {
-		log.Fatalf("[APPLICATION]: Failed to create migration instance: %v", err)
+		log.Printf("[APPLICATION]: Failed to create migration instance: %v", err)
+		return
 	}
 
 	if err = migrations.Up(); !errors.Is(err, migrate.ErrNoChange) {
-		log.Fatalf("[APPLICATION]: Failed to up migrations: %v", err)
+		log.Printf("[APPLICATION]: Failed to up migrations: %v", err)
+		return
 	}
 	log.Printf("[APPLICATION]: Migrations successfully created")
 
 	s := server.NewServer(db)
-	s.SetupRoutes()
+	s.SetupRoutes(cfg)
 
-	log.Fatal(http.ListenAndServe(":6060", s.Router))
+	log.Println(http.ListenAndServe(":6060", s.Router))
 }
