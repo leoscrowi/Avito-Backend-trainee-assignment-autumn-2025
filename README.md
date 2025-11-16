@@ -10,7 +10,7 @@ ___
 ### Запуск тестов
 `cp .env-test .env.test` \
 `docker compose -f docker-compose.test.yml up -d`\
-`go test ./tests/...`\
+`go test ./tests/...`
 
 ### Запуск приложения
 `cp .env-sample .env` \
