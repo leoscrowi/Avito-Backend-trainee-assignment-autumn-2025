@@ -3,9 +3,9 @@ package v1
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/go-chi/chi/v5"
 	"net/http"
 
+	"github.com/go-chi/chi/v5"
 	"github.com/leoscrowi/pr-assignment-service/domain"
 	"github.com/leoscrowi/pr-assignment-service/internal/app/teams"
 	"github.com/leoscrowi/pr-assignment-service/internal/app/teams/dtos"
