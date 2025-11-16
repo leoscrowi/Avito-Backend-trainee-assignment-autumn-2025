@@ -77,3 +77,9 @@ Pull request assignment service
 
 - `docker-compose up -d`
 - `docker-compose down -v`
+
+## Запуск
+`cp .env-test .env.test` - для тестов
+`cp .env-sample .env` - для приложения
+
+`docker compose -f docker-compose.test.yml up -d`
