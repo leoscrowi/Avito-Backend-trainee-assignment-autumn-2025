@@ -13,7 +13,7 @@ import (
 )
 
 var (
-	TestURL    string = "http://localhost:6060"
+	TestURL    string = "http://localhost:8080"
 	AdminToken string = "admin"
 	UserToken  string = "user"
 	DbURL      string

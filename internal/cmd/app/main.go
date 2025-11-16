@@ -63,5 +63,5 @@ func main() {
 	s := server.NewServer(db)
 	s.SetupRoutes(cfg)
 
-	log.Println(http.ListenAndServe(":6060", s.Router))
+	log.Println(http.ListenAndServe(":8080", s.Router))
 }

@@ -17,7 +17,7 @@ services:
     env_file: .env.test
     restart: unless-stopped
     ports:
-      - "6060:6060"
+      - "8080:8080"
 
 volumes:
   postgres-test-data:

@@ -14,7 +14,7 @@ import (
 
 func TestMain(m *testing.M) {
 	if helpers.TestURL == "" {
-		helpers.TestURL = "http://localhost:6060"
+		helpers.TestURL = "http://localhost:8080"
 	}
 
 	helpers.DbURL = fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=%s",
