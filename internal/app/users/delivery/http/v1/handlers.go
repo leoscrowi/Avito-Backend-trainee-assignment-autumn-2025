@@ -3,6 +3,7 @@ package v1
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/go-chi/chi/v5"
 	"net/http"
 
 	"github.com/leoscrowi/pr-assignment-service/domain"
@@ -44,22 +45,18 @@ func (c *UsersController) SetIsActive(w http.ResponseWriter, r *http.Request) {
 }
 
 func (c *UsersController) GetReview(w http.ResponseWriter, r *http.Request) {
-	var req dtos.GetReviewRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		domain.WriteError(w, domain.NewError(domain.BAD_REQUEST, "bad request", err))
-		return
-	}
+	userID := chi.URLParam(r, "user_id")
 
-	if req.UserID == "" {
+	if userID == "" {
 		domain.WriteError(w, domain.NewError(domain.BAD_REQUEST, "bad request", fmt.Errorf("wrong json format")))
 		return
 	}
 
-	prs, err := c.usecase.GetReview(r.Context(), req.UserID)
+	prs, err := c.usecase.GetReview(r.Context(), userID)
 	if err != nil {
 		domain.WriteError(w, domain.ConvertToErrorResponse(err))
 	}
 
-	var resp = dtos.GetReviewResponse{UserID: req.UserID, PullRequests: prs}
+	var resp = dtos.GetReviewResponse{UserID: userID, PullRequests: prs}
 	utils.WriteHeader(w, http.StatusOK, &resp)
 }

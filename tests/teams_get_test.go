@@ -26,10 +26,7 @@ func TestTeamGet_Success(t *testing.T) {
 	_ = respAdd.Body.Close()
 	helpers.RequireStatusCode(t, respAdd, http.StatusCreated)
 
-	type response struct {
-		TeamName string `json:"team_name"`
-	}
-	respGet := helpers.GetJSON(t, "/team/get", response{TeamName: teamName}, helpers.AdminToken)
+	respGet := helpers.GetJSON(t, "/team/get/test_get_team", nil, helpers.AdminToken)
 	defer func(Body io.ReadCloser) {
 		_ = Body.Close()
 	}(respGet.Body)
@@ -57,16 +54,16 @@ func TestTeamGet_Success(t *testing.T) {
 }
 
 func TestTeamGet_EmptyTeamName(t *testing.T) {
-	resp := helpers.GetJSON(t, "/team/get", map[string]string{"team_name": ""}, helpers.AdminToken)
+	resp := helpers.GetJSON(t, "/team/get", nil, helpers.AdminToken)
 	defer func(Body io.ReadCloser) {
 		_ = Body.Close()
 	}(resp.Body)
 
-	require.Equal(t, http.StatusBadRequest, resp.StatusCode)
+	require.Equal(t, http.StatusNotFound, resp.StatusCode)
 }
 
 func TestTeamGet_Unauthorized(t *testing.T) {
-	resp := helpers.GetJSON(t, "/team/get", map[string]string{"team_name": "some_team"}, "")
+	resp := helpers.GetJSON(t, "/team/get/some_team", nil, "")
 	defer func(Body io.ReadCloser) {
 		_ = Body.Close()
 	}(resp.Body)
@@ -77,7 +74,7 @@ func TestTeamGet_Unauthorized(t *testing.T) {
 func TestTeamGet_NotFound(t *testing.T) {
 	nonExistentTeam := "non_existent_team_123"
 
-	resp := helpers.GetJSON(t, "/team/get", map[string]string{"team_name": nonExistentTeam}, helpers.AdminToken)
+	resp := helpers.GetJSON(t, "/team/get/non_existent_team_123", map[string]string{"team_name": nonExistentTeam}, helpers.AdminToken)
 	defer func(Body io.ReadCloser) {
 		_ = Body.Close()
 	}(resp.Body)

@@ -8,7 +8,7 @@ import (
 
 func (c *TeamsController) SetupRoutes(r chi.Router, cfg *config.Config) {
 	r.Route("/team", func(r chi.Router) {
-		r.With(middleware.AuthMiddleware(cfg)).Get("/get", c.GetTeam)
+		r.With(middleware.AuthMiddleware(cfg)).Get("/get/{team_name}", c.GetTeam)
 		r.Post("/add", c.AddTeam)
 	})
 }

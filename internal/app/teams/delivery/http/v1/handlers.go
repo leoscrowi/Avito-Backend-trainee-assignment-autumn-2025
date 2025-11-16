@@ -3,6 +3,7 @@ package v1
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/go-chi/chi/v5"
 	"net/http"
 
 	"github.com/leoscrowi/pr-assignment-service/domain"
@@ -20,18 +21,14 @@ func NewTeamsController(usecase teams.Usecase) *TeamsController {
 }
 
 func (c *TeamsController) GetTeam(w http.ResponseWriter, r *http.Request) {
-	var req dtos.GetTeamRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		domain.WriteError(w, domain.NewError(domain.BAD_REQUEST, "bad request", err))
-		return
-	}
+	teamName := chi.URLParam(r, "team_name")
 
-	if req.TeamName == "" {
+	if teamName == "" {
 		domain.WriteError(w, domain.NewError(domain.BAD_REQUEST, "bad request", fmt.Errorf("wrong json format")))
 		return
 	}
 
-	team, err := c.usecase.GetTeam(r.Context(), req.TeamName)
+	team, err := c.usecase.GetTeam(r.Context(), teamName)
 	if err != nil {
 		domain.WriteError(w, domain.ConvertToErrorResponse(err))
 		return

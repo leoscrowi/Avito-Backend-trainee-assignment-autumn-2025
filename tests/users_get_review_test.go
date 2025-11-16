@@ -26,10 +26,7 @@ func TestGetUserReview_EmptyList(t *testing.T) {
 	_ = respAdd.Body.Close()
 	helpers.RequireStatusCode(t, respAdd, http.StatusCreated)
 
-	req := map[string]interface{}{
-		"user_id": "test_u1_review_empty",
-	}
-	resp := helpers.GetJSON(t, "/users/getReview", req, helpers.UserToken)
+	resp := helpers.GetJSON(t, "/users/getReview/test_u1_review_empty", nil, helpers.UserToken)
 	defer func(Body io.ReadCloser) {
 		_ = Body.Close()
 	}(resp.Body)
@@ -71,10 +68,7 @@ func TestGetUserReview_NotEmptyList(t *testing.T) {
 	}(respCreate.Body)
 	helpers.RequireStatusCode(t, respCreate, http.StatusCreated)
 
-	req := map[string]interface{}{
-		"user_id": "test_u2_review_not_empty",
-	}
-	respGet := helpers.GetJSON(t, "/users/getReview", req, helpers.AdminToken)
+	respGet := helpers.GetJSON(t, "/users/getReview/test_u2_review_not_empty", nil, helpers.AdminToken)
 	defer func(Body io.ReadCloser) {
 		_ = Body.Close()
 	}(respGet.Body)
